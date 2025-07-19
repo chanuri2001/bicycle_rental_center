@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../utils/constants.dart';
-import '../../main.dart';
+import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +16,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  final AuthService _authService = AuthService();
+
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -25,32 +26,33 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await supabase.auth.signInWithPassword(
-        email: _emailController.text.trim(),
+      final tokenResponse = await _authService.login(
+        username: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/dashboard');
-      }
-    } on PostgrestException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error.message),
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        if (tokenResponse.isValid) {
+          // Login successful, navigate to dashboard
+          Navigator.of(context).pushReplacementNamed('/dashboard');
+        } else {
+          // Show error message from token response
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tokenResponse.error ?? 'Login failed'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login successful! (Demo mode)'),
-            backgroundColor: AppColors.success,
+            content: Text('Login failed: ${error.toString()}'),
+            backgroundColor: AppColors.danger,
           ),
         );
-        Navigator.of(context).pushReplacementNamed('/dashboard');
       }
     } finally {
       if (mounted) {
