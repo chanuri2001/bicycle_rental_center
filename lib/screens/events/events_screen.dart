@@ -41,9 +41,6 @@ class _EventsScreenState extends State<EventsScreen> {
         location: 'Mountain Trail Park',
         maxParticipants: 50,
         maxHeadCount: 50,
-
-        imageUrl:
-            'https://www.ambmag.com.au/wp-content/uploads/2025/06/Copy-of-NZ-MTB-RALLY-DAY-3-%C2%A9Mikhail-Huggins-@macca._h-83-2048x1365.jpg',
         eligibilityCriteria: 'Age 16+, Basic cycling experience required',
         durationHours: 4,
         features: [
@@ -51,6 +48,11 @@ class _EventsScreenState extends State<EventsScreen> {
           'Professional guides',
           'Safety equipment included',
         ],
+        difficulty: 'Intermediate',
+        price: 49.99,
+        imageUrl:
+            'https://www.ambmag.com.au/wp-content/uploads/2025/06/Copy-of-NZ-MTB-RALLY-DAY-3-%C2%A9Mikhail-Huggins-@macca._h-83-2048x1365.jpg',
+        availableDates: [],
       ),
       Event(
         id: '2',
@@ -62,12 +64,14 @@ class _EventsScreenState extends State<EventsScreen> {
         location: 'Downtown City Center',
         maxParticipants: 30,
         maxHeadCount: 30,
-
-        imageUrl:
-            'https://veronikasadventure.com/wp-content/uploads/2024/08/polonnaruwa-ancient-city-cycling-day-tour-from-negombo.jpg',
         eligibilityCriteria: 'Age 12+, No experience required',
         durationHours: 2,
         features: ['City landmarks', 'Photo stops', 'Local guide'],
+        difficulty: 'Easy',
+        price: 29.99,
+        imageUrl:
+            'https://veronikasadventure.com/wp-content/uploads/2024/08/polonnaruwa-ancient-city-cycling-day-tour-from-negombo.jpg',
+        availableDates: [],
       ),
       Event(
         id: '3',
@@ -79,12 +83,14 @@ class _EventsScreenState extends State<EventsScreen> {
         location: 'Bicycle Center Workshop',
         maxParticipants: 20,
         maxHeadCount: 20,
-
-        imageUrl:
-            'https://i0.wp.com/duluthfolkschool.com/wp-content/uploads/2023/05/Bike-Maintenance-Aug-2019-6.jpg?fit=1200%2C801&ssl=1',
         eligibilityCriteria: 'Age 14+, Bring your own bike',
         durationHours: 3,
         features: ['Hands-on learning', 'Tools provided', 'Take-home guide'],
+        difficulty: 'Beginner',
+        price: 39.99,
+        imageUrl:
+            'https://i0.wp.com/duluthfolkschool.com/wp-content/uploads/2023/05/Bike-Maintenance-Aug-2019-6.jpg?fit=1200%2C801&ssl=1',
+        availableDates: [],
       ),
     ];
 
@@ -173,36 +179,37 @@ class _EventsScreenState extends State<EventsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Image Section
-          if (event.imageUrl != null)
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(AppConstants.borderRadius),
-                topRight: Radius.circular(AppConstants.borderRadius),
-              ),
-              child: Container(
-                height: 200,
-                width: double.infinity,
-                child: Image.network(
-                  event.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _buildImagePlaceholder();
-                  },
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 200,
-                      color: AppColors.darkBackground,
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(AppConstants.borderRadius),
+              topRight: Radius.circular(AppConstants.borderRadius),
+            ),
+            child: Container(
+              height: 200,
+              width: double.infinity,
+              child: Image.network(
+                event.imageUrl.isNotEmpty
+                    ? event.imageUrl
+                    : 'https://via.placeholder.com/400x200?text=No+Image',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return _buildImagePlaceholder();
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    height: 200,
+                    color: AppColors.darkBackground,
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
             ),
+          ),
 
           // Content Section
           Padding(
@@ -275,6 +282,8 @@ class _EventsScreenState extends State<EventsScreen> {
                     _buildEventInfo(Icons.calendar_today, event.formattedDate),
                     const SizedBox(width: 16),
                     _buildEventInfo(Icons.access_time, event.formattedTime),
+                    const SizedBox(width: 16),
+                    _buildEventInfo(Icons.attach_money, '\$${event.price}'),
                   ],
                 ),
 
@@ -284,9 +293,32 @@ class _EventsScreenState extends State<EventsScreen> {
                   children: [
                     _buildEventInfo(Icons.location_on, event.location),
                     const SizedBox(width: 16),
-                    _buildEventInfo(Icons.schedule, '${event.durationHours}h'),
+                    _buildEventInfo(Icons.straighten, event.difficulty),
                   ],
                 ),
+
+                const SizedBox(height: 16),
+
+                // Features
+                if (event.features.isNotEmpty)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children:
+                        event.features
+                            .take(3)
+                            .map(
+                              (feature) => Chip(
+                                label: Text(
+                                  feature,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                backgroundColor: AppColors.darkBackground,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            )
+                            .toList(),
+                  ),
 
                 const SizedBox(height: 16),
 
@@ -314,7 +346,7 @@ class _EventsScreenState extends State<EventsScreen> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '${event.maxParticipants}',
+                            '${event.maxParticipants} max',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,

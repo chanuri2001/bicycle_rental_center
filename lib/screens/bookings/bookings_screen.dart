@@ -19,7 +19,7 @@ class _BookingsScreenState extends State<BookingsScreen>
 
   // Filter variables for pending bookings
   DateTime? _submissionDateFilter;
-  DateTime? _startDateFilter;
+  DateTime? _pickupDateFilter;
   String _searchQuery = '';
 
   @override
@@ -43,18 +43,19 @@ class _BookingsScreenState extends State<BookingsScreen>
         // Update active timers
         for (int i = 0; i < _allBookings.length; i++) {
           if (_allBookings[i].status == RentalStatus.active &&
-              _allBookings[i].pickupDate != null) {
+              _allBookings[i].actualPickupDate != null) {
             final currentTime = DateTime.now();
-            final pickupTime = _allBookings[i].pickupDate!;
+            final pickupTime = _allBookings[i].actualPickupDate!;
             final activeTime = currentTime.difference(pickupTime);
 
             _allBookings[i] = _allBookings[i].copyWith(activeTime: activeTime);
 
             // Check if rental period is completed
-            if (currentTime.isAfter(_allBookings[i].endDate)) {
+            if (_allBookings[i].actualReturnDate == null &&
+                currentTime.isAfter(_allBookings[i].returnDate)) {
               _allBookings[i] = _allBookings[i].copyWith(
                 status: RentalStatus.completed,
-                returnDate: currentTime,
+                actualReturnDate: currentTime,
               );
             }
           }
@@ -74,77 +75,116 @@ class _BookingsScreenState extends State<BookingsScreen>
     _allBookings = [
       RentalRequest(
         id: '1',
-        userId: 'user1',
         userName: 'John Doe',
         userEmail: 'john@example.com',
         userPhone: '+1234567890',
-        bicycleId: 'bike1',
-        bicycleName: 'Mountain Explorer',
-        bicycleModel: 'Trek X-Caliber',
+        licenseNumber: 'DL123456789',
+        bikes: [
+          {
+            'bike_id': 'bike1',
+            'bike_name': 'Mountain Explorer',
+            'bike_model': 'Trek X-Caliber',
+            'quantity': 1,
+            'daily_rate': 25.0,
+          },
+        ],
         submissionDate: DateTime.now().subtract(const Duration(days: 2)),
-        startDate: DateTime.now().add(const Duration(days: 1)),
-        endDate: DateTime.now().add(const Duration(days: 3)),
-        durationDays: 2,
+        pickupDate: DateTime.now().add(const Duration(days: 1)),
+        returnDate: DateTime.now().add(const Duration(days: 3)),
         totalCost: 50.0,
+        deposit: 100.0,
+        paymentMethod: 'card',
         status: RentalStatus.pending,
-        notes: 'Need for weekend trip',
+        termsAccepted: true,
+        ageVerified: true,
+        damageResponsibility: true,
       ),
       RentalRequest(
         id: '2',
-        userId: 'user2',
         userName: 'Jane Smith',
         userEmail: 'jane@example.com',
         userPhone: '+1234567891',
-        bicycleId: 'bike2',
-        bicycleName: 'City Cruiser',
-        bicycleModel: 'Giant Escape',
+        licenseNumber: 'DL987654321',
+        bikes: [
+          {
+            'bike_id': 'bike2',
+            'bike_name': 'City Cruiser',
+            'bike_model': 'Giant Escape',
+            'quantity': 1,
+            'daily_rate': 20.0,
+          },
+        ],
         submissionDate: DateTime.now().subtract(const Duration(days: 1)),
-        startDate: DateTime.now(),
-        endDate: DateTime.now().add(const Duration(days: 1)),
-        durationDays: 1,
-        totalCost: 25.0,
+        pickupDate: DateTime.now(),
+        returnDate: DateTime.now().add(const Duration(days: 1)),
+        totalCost: 20.0,
+        deposit: 80.0,
+        paymentMethod: 'card',
         status: RentalStatus.approved,
+        termsAccepted: true,
+        ageVerified: true,
+        damageResponsibility: true,
         approvalDate: DateTime.now().subtract(const Duration(hours: 2)),
         approvedBy: 'Admin',
       ),
       RentalRequest(
         id: '3',
-        userId: 'user3',
         userName: 'Mike Johnson',
         userEmail: 'mike@example.com',
         userPhone: '+1234567892',
-        bicycleId: 'bike3',
-        bicycleName: 'Speed Demon',
-        bicycleModel: 'Specialized Allez',
+        licenseNumber: 'DL456789123',
+        bikes: [
+          {
+            'bike_id': 'bike3',
+            'bike_name': 'Speed Demon',
+            'bike_model': 'Specialized Allez',
+            'quantity': 1,
+            'daily_rate': 30.0,
+          },
+        ],
         submissionDate: DateTime.now().subtract(const Duration(days: 3)),
-        startDate: DateTime.now().subtract(const Duration(hours: 2)),
-        endDate: DateTime.now().add(const Duration(hours: 22)),
-        durationDays: 1,
-        totalCost: 30.0,
-        status: RentalStatus.active,
-        approvalDate: DateTime.now().subtract(const Duration(days: 1)),
         pickupDate: DateTime.now().subtract(const Duration(hours: 2)),
+        returnDate: DateTime.now().add(const Duration(hours: 22)),
+        totalCost: 30.0,
+        deposit: 120.0,
+        paymentMethod: 'card',
+        status: RentalStatus.active,
+        termsAccepted: true,
+        ageVerified: true,
+        damageResponsibility: true,
+        approvalDate: DateTime.now().subtract(const Duration(days: 1)),
+        actualPickupDate: DateTime.now().subtract(const Duration(hours: 2)),
         approvedBy: 'Admin',
         activeTime: const Duration(hours: 2),
       ),
       RentalRequest(
         id: '4',
-        userId: 'user4',
         userName: 'Sarah Wilson',
         userEmail: 'sarah@example.com',
         userPhone: '+1234567893',
-        bicycleId: 'bike4',
-        bicycleName: 'Urban Rider',
-        bicycleModel: 'Cannondale Quick',
+        licenseNumber: 'DL789123456',
+        bikes: [
+          {
+            'bike_id': 'bike4',
+            'bike_name': 'Urban Rider',
+            'bike_model': 'Cannondale Quick',
+            'quantity': 1,
+            'daily_rate': 25.0,
+          },
+        ],
         submissionDate: DateTime.now().subtract(const Duration(days: 5)),
-        startDate: DateTime.now().subtract(const Duration(days: 2)),
-        endDate: DateTime.now().subtract(const Duration(days: 1)),
-        durationDays: 1,
-        totalCost: 25.0,
-        status: RentalStatus.completed,
-        approvalDate: DateTime.now().subtract(const Duration(days: 3)),
         pickupDate: DateTime.now().subtract(const Duration(days: 2)),
         returnDate: DateTime.now().subtract(const Duration(days: 1)),
+        totalCost: 25.0,
+        deposit: 100.0,
+        paymentMethod: 'card',
+        status: RentalStatus.completed,
+        termsAccepted: true,
+        ageVerified: true,
+        damageResponsibility: true,
+        approvalDate: DateTime.now().subtract(const Duration(days: 3)),
+        actualPickupDate: DateTime.now().subtract(const Duration(days: 2)),
+        actualReturnDate: DateTime.now().subtract(const Duration(days: 1)),
         approvedBy: 'Admin',
         activeTime: const Duration(hours: 24),
       ),
@@ -167,10 +207,10 @@ class _BookingsScreenState extends State<BookingsScreen>
                     booking.userName.toLowerCase().contains(
                       _searchQuery.toLowerCase(),
                     ) ||
-                    booking.bicycleName.toLowerCase().contains(
+                    booking.userEmail.toLowerCase().contains(
                       _searchQuery.toLowerCase(),
                     ) ||
-                    booking.bicycleModel.toLowerCase().contains(
+                    booking.bikesSummary.toLowerCase().contains(
                       _searchQuery.toLowerCase(),
                     ),
               )
@@ -181,7 +221,7 @@ class _BookingsScreenState extends State<BookingsScreen>
   }
 
   List<RentalRequest> _getBookingsByStatus(RentalStatus? status) {
-    if (status == null) return _filteredBookings; // All bookings
+    if (status == null) return _filteredBookings;
     return _filteredBookings
         .where((booking) => booking.status == status)
         .toList();
@@ -204,14 +244,14 @@ class _BookingsScreenState extends State<BookingsScreen>
               .toList();
     }
 
-    if (_startDateFilter != null) {
+    if (_pickupDateFilter != null) {
       pending =
           pending
               .where(
                 (booking) =>
-                    booking.startDate.year == _startDateFilter!.year &&
-                    booking.startDate.month == _startDateFilter!.month &&
-                    booking.startDate.day == _startDateFilter!.day,
+                    booking.pickupDate.year == _pickupDateFilter!.year &&
+                    booking.pickupDate.month == _pickupDateFilter!.month &&
+                    booking.pickupDate.day == _pickupDateFilter!.day,
               )
               .toList();
     }
@@ -343,9 +383,9 @@ class _BookingsScreenState extends State<BookingsScreen>
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildDateFilter(
-                      'Start Date',
-                      _startDateFilter,
-                      (date) => setState(() => _startDateFilter = date),
+                      'Pickup Date',
+                      _pickupDateFilter,
+                      (date) => setState(() => _pickupDateFilter = date),
                     ),
                   ),
                 ],
@@ -357,7 +397,7 @@ class _BookingsScreenState extends State<BookingsScreen>
                     onPressed: () {
                       setState(() {
                         _submissionDateFilter = null;
-                        _startDateFilter = null;
+                        _pickupDateFilter = null;
                       });
                     },
                     child: const Text(
@@ -512,231 +552,249 @@ class _BookingsScreenState extends State<BookingsScreen>
     bool showApprovedActions = false,
     bool showActiveActions = false,
   }) {
-    return Container(
+    return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _getStatusColor(booking.status).withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(AppConstants.borderRadius),
-                topRight: Radius.circular(AppConstants.borderRadius),
+      color: AppColors.cardBackground,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with status
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  booking.userName,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(booking.status),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    booking.statusDisplayName,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // User contact info
+            _buildInfoRow(Icons.email, booking.userEmail),
+            _buildInfoRow(Icons.phone, booking.userPhone),
+            if (booking.licenseNumber != null)
+              _buildInfoRow(Icons.phone, booking.licenseNumber!),
+
+            const SizedBox(height: 8),
+
+            // Bikes summary
+            Text(
+              booking.bikesSummary,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
               ),
             ),
-            child: Row(
+            Text(
+              'Total bikes: ${booking.totalBikesCount}',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Dates
+            Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        booking.userName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
+                      const Text(
+                        'Pickup:',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
                         ),
                       ),
                       Text(
-                        booking.bicycleName,
+                        booking.formattedPickupDate,
                         style: const TextStyle(
+                          color: AppColors.textPrimary,
                           fontSize: 14,
-                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(booking.status),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    booking.statusDisplayName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Return:',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        booking.formattedReturnDate,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
 
-          // Content
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 8),
+
+            // Cost
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Bicycle Info
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.directions_bike,
-                      color: AppColors.textSecondary,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${booking.bicycleName} - ${booking.bicycleModel}',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // Dates
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildInfoRow(
-                        Icons.calendar_today,
-                        'Submitted: ${booking.formattedSubmissionDate}',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildInfoRow(
-                        Icons.play_arrow,
-                        'Start: ${booking.formattedStartDate}',
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildInfoRow(
-                        Icons.stop,
-                        'End: ${booking.formattedEndDate}',
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Contact Info
-                const SizedBox(height: 8),
-                _buildInfoRow(Icons.email, booking.userEmail),
-                const SizedBox(height: 4),
-                _buildInfoRow(Icons.phone, booking.userPhone),
-
-                // Cost
-                const SizedBox(height: 8),
-                _buildInfoRow(
-                  Icons.attach_money,
-                  '\$${booking.totalCost.toStringAsFixed(2)} (${booking.durationDays} days)',
-                ),
-
-                // Active Timer
-                if (booking.status == RentalStatus.active &&
-                    booking.activeTime != null)
-                  Container(
-                    margin: const EdgeInsets.only(top: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.timer,
-                          color: AppColors.warning,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Active Time: ${booking.formattedActiveTime}',
-                          style: const TextStyle(
-                            color: AppColors.warning,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                const Text(
+                  'Total Cost:',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
                   ),
-
-                // Notes
-                if (booking.notes != null && booking.notes!.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.only(top: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.note, color: AppColors.info, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            booking.notes!,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+                Text(
+                  '\$${booking.totalCost.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
                   ),
-
-                // Action Buttons
-                if (showPendingActions ||
-                    showApprovedActions ||
-                    showActiveActions)
-                  Container(
-                    margin: const EdgeInsets.only(top: 16),
-                    child: _buildActionButtons(
-                      booking,
-                      showPendingActions,
-                      showApprovedActions,
-                      showActiveActions,
-                    ),
-                  ),
+                ),
               ],
             ),
-          ),
-        ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Deposit:',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  '\$${booking.deposit.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+
+            // Status-specific information
+            if (booking.status == RentalStatus.active &&
+                booking.activeTime != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Active for: ${booking.formattedActiveTime}',
+                  style: const TextStyle(
+                    color: AppColors.success,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+
+            if (booking.status == RentalStatus.rejected &&
+                booking.rejectionReason != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Reason: ${booking.rejectionReason}',
+                  style: const TextStyle(color: AppColors.danger, fontSize: 12),
+                ),
+              ),
+
+            // Action buttons
+            if (showPendingActions || showApprovedActions || showActiveActions)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: _buildActionButtons(
+                  booking,
+                  showPendingActions,
+                  showApprovedActions,
+                  showActiveActions,
+                ),
+              ),
+
+            // More options button
+            Align(
+              alignment: Alignment.bottomRight,
+              child: PopupMenuButton<String>(
+                icon: const Icon(
+                  Icons.more_vert,
+                  color: AppColors.textSecondary,
+                ),
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    _showEditBookingDialog(booking);
+                  } else if (value == 'delete') {
+                    _deleteBooking(booking);
+                  }
+                },
+                itemBuilder:
+                    (BuildContext context) => [
+                      const PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Text('Edit Booking'),
+                      ),
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Text('Delete Booking'),
+                      ),
+                    ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildInfoRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.textSecondary, size: 14),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.textSecondary, size: 14),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -778,9 +836,9 @@ class _BookingsScreenState extends State<BookingsScreen>
       return SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
-          onPressed: () => _handOverBicycle(booking),
+          onPressed: () => _markAsPickedUp(booking),
           icon: const Icon(Icons.directions_bike, size: 16),
-          label: const Text('Hand Over Bicycle'),
+          label: const Text('Mark as Picked Up'),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
@@ -791,9 +849,9 @@ class _BookingsScreenState extends State<BookingsScreen>
       return SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
-          onPressed: () => _completeBicycleReturn(booking),
+          onPressed: () => _markAsReturned(booking),
           icon: const Icon(Icons.assignment_turned_in, size: 16),
-          label: const Text('Complete Return'),
+          label: const Text('Mark as Returned'),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.warning,
             foregroundColor: Colors.white,
@@ -948,18 +1006,18 @@ class _BookingsScreenState extends State<BookingsScreen>
     );
   }
 
-  void _handOverBicycle(RentalRequest booking) {
+  void _markAsPickedUp(RentalRequest booking) {
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
             backgroundColor: AppColors.cardBackground,
             title: const Text(
-              'Hand Over Bicycle',
+              'Mark as Picked Up',
               style: TextStyle(color: AppColors.textPrimary),
             ),
             content: Text(
-              'Hand over bicycle to ${booking.userName}? This will start the rental timer.',
+              'Mark bicycle as picked up by ${booking.userName}? This will start the rental timer.',
               style: const TextStyle(color: AppColors.textSecondary),
             ),
             actions: [
@@ -980,20 +1038,22 @@ class _BookingsScreenState extends State<BookingsScreen>
                     if (index != -1) {
                       _allBookings[index] = booking.copyWith(
                         status: RentalStatus.active,
-                        pickupDate: DateTime.now(),
+                        actualPickupDate: DateTime.now(),
                         activeTime: Duration.zero,
                       );
                     }
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Bicycle handed over! Timer started.'),
+                      content: Text(
+                        'Bicycle marked as picked up! Timer started.',
+                      ),
                       backgroundColor: AppColors.success,
                     ),
                   );
                 },
                 child: const Text(
-                  'Hand Over',
+                  'Confirm',
                   style: TextStyle(color: AppColors.primary),
                 ),
               ),
@@ -1002,18 +1062,18 @@ class _BookingsScreenState extends State<BookingsScreen>
     );
   }
 
-  void _completeBicycleReturn(RentalRequest booking) {
+  void _markAsReturned(RentalRequest booking) {
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
             backgroundColor: AppColors.cardBackground,
             title: const Text(
-              'Complete Return',
+              'Mark as Returned',
               style: TextStyle(color: AppColors.textPrimary),
             ),
             content: Text(
-              'Mark bicycle return as completed for ${booking.userName}?',
+              'Mark bicycle as returned by ${booking.userName}?',
               style: const TextStyle(color: AppColors.textSecondary),
             ),
             actions: [
@@ -1034,20 +1094,340 @@ class _BookingsScreenState extends State<BookingsScreen>
                     if (index != -1) {
                       _allBookings[index] = booking.copyWith(
                         status: RentalStatus.completed,
-                        returnDate: DateTime.now(),
+                        actualReturnDate: DateTime.now(),
                       );
                     }
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Bicycle return completed!'),
+                      content: Text('Bicycle marked as returned!'),
                       backgroundColor: AppColors.success,
                     ),
                   );
                 },
                 child: const Text(
-                  'Complete',
+                  'Confirm',
                   style: TextStyle(color: AppColors.success),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showEditBookingDialog(RentalRequest booking) {
+    final pickupDateController = TextEditingController(
+      text: booking.formattedPickupDate,
+    );
+    final returnDateController = TextEditingController(
+      text: booking.formattedReturnDate,
+    );
+
+    // Create controllers for each bike's quantity
+    final bikeQuantityControllers =
+        booking.bikes.map((bike) {
+          return TextEditingController(text: bike['quantity'].toString());
+        }).toList();
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                backgroundColor: AppColors.cardBackground,
+                title: const Text(
+                  'Edit Booking',
+                  style: TextStyle(color: AppColors.textPrimary),
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Dates section
+                      const Text(
+                        'Dates',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: pickupDateController,
+                        decoration: const InputDecoration(
+                          labelText: 'Pickup Date',
+                          labelStyle: TextStyle(color: AppColors.textSecondary),
+                          suffixIcon: Icon(Icons.calendar_today, size: 18),
+                        ),
+                        readOnly: true,
+                        onTap: () async {
+                          final DateTime? picked = await showDatePicker(
+                            context: context,
+                            initialDate: booking.pickupDate,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 365),
+                            ),
+                          );
+                          if (picked != null) {
+                            pickupDateController.text =
+                                '${picked.day}/${picked.month}/${picked.year}';
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: returnDateController,
+                        decoration: const InputDecoration(
+                          labelText: 'Return Date',
+                          labelStyle: TextStyle(color: AppColors.textSecondary),
+                          suffixIcon: Icon(Icons.calendar_today, size: 18),
+                        ),
+                        readOnly: true,
+                        onTap: () async {
+                          final DateTime? picked = await showDatePicker(
+                            context: context,
+                            initialDate: booking.returnDate,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 365),
+                            ),
+                          );
+                          if (picked != null) {
+                            returnDateController.text =
+                                '${picked.day}/${picked.month}/${picked.year}';
+                          }
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 8),
+
+                      // Bikes section
+                      const Text(
+                        'Bikes',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      ...booking.bikes.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final bike = entry.value;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${bike['bike_name']} (${bike['bike_model']})',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Daily rate: \$${bike['daily_rate']}',
+                                    style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.remove, size: 18),
+                                  onPressed: () {
+                                    final currentValue =
+                                        int.tryParse(
+                                          bikeQuantityControllers[index].text,
+                                        ) ??
+                                        0;
+                                    if (currentValue > 1) {
+                                      setState(() {
+                                        bikeQuantityControllers[index].text =
+                                            (currentValue - 1).toString();
+                                      });
+                                    }
+                                  },
+                                ),
+                                SizedBox(
+                                  width: 40,
+                                  child: TextField(
+                                    controller: bikeQuantityControllers[index],
+                                    textAlign: TextAlign.center,
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        vertical: 4,
+                                      ),
+                                    ),
+                                    onChanged: (value) {
+                                      // Validate input
+                                      if (value.isEmpty ||
+                                          int.tryParse(value) == null) {
+                                        bikeQuantityControllers[index].text =
+                                            '1';
+                                      }
+                                    },
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.add, size: 18),
+                                  onPressed: () {
+                                    final currentValue =
+                                        int.tryParse(
+                                          bikeQuantityControllers[index].text,
+                                        ) ??
+                                        0;
+                                    setState(() {
+                                      bikeQuantityControllers[index].text =
+                                          (currentValue + 1).toString();
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      // Parse dates
+                      final pickupParts = pickupDateController.text.split('/');
+                      final newPickupDate = DateTime(
+                        int.parse(pickupParts[2]),
+                        int.parse(pickupParts[1]),
+                        int.parse(pickupParts[0]),
+                      );
+
+                      final returnParts = returnDateController.text.split('/');
+                      final newReturnDate = DateTime(
+                        int.parse(returnParts[2]),
+                        int.parse(returnParts[1]),
+                        int.parse(returnParts[0]),
+                      );
+
+                      if (newReturnDate.isBefore(newPickupDate)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Return date must be after pickup date!',
+                            ),
+                            backgroundColor: AppColors.danger,
+                          ),
+                        );
+                        return;
+                      }
+
+                      // Update bike quantities
+                      final updatedBikes =
+                          booking.bikes.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final bike = Map<String, dynamic>.from(entry.value);
+                            bike['quantity'] = int.parse(
+                              bikeQuantityControllers[index].text,
+                            );
+                            return bike;
+                          }).toList();
+
+                      // Calculate new total cost
+                      final rentalDays =
+                          newReturnDate.difference(newPickupDate).inDays;
+                      final newTotalCost = updatedBikes.fold(0.0, (sum, bike) {
+                        return sum +
+                            (bike['daily_rate'] *
+                                bike['quantity'] *
+                                rentalDays);
+                      });
+
+                      Navigator.pop(context);
+                      setState(() {
+                        final index = _allBookings.indexWhere(
+                          (b) => b.id == booking.id,
+                        );
+                        if (index != -1) {
+                          _allBookings[index] = booking.copyWith(
+                            pickupDate: newPickupDate,
+                            returnDate: newReturnDate,
+                            bikes: updatedBikes,
+                            totalCost: newTotalCost,
+                          );
+                        }
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Booking updated successfully!'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Save',
+                      style: TextStyle(color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+    );
+  }
+
+  void _deleteBooking(RentalRequest booking) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.cardBackground,
+            title: const Text(
+              'Delete Booking',
+              style: TextStyle(color: AppColors.textPrimary),
+            ),
+            content: Text(
+              'Are you sure you want to delete booking for ${booking.userName}?',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _allBookings.removeWhere((b) => b.id == booking.id);
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Booking deleted!'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(color: AppColors.danger),
                 ),
               ),
             ],

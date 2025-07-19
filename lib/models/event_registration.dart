@@ -4,7 +4,7 @@ enum EventRegistrationStatus {
   rejected,
   confirmed,
   completed,
-  cancelled
+  cancelled,
 }
 
 class EventRegistration {
@@ -14,6 +14,7 @@ class EventRegistration {
   final String participantEmail;
   final String participantPhone;
   final int age;
+  final int count;
   final String emergencyContact;
   final String emergencyPhone;
   final String medicalConditions;
@@ -35,6 +36,7 @@ class EventRegistration {
     required this.participantEmail,
     required this.participantPhone,
     required this.age,
+    required this.count,
     required this.emergencyContact,
     required this.emergencyPhone,
     this.medicalConditions = '',
@@ -57,6 +59,7 @@ class EventRegistration {
     String? participantEmail,
     String? participantPhone,
     int? age,
+    int?count,
     String? emergencyContact,
     String? emergencyPhone,
     String? medicalConditions,
@@ -78,6 +81,7 @@ class EventRegistration {
       participantEmail: participantEmail ?? this.participantEmail,
       participantPhone: participantPhone ?? this.participantPhone,
       age: age ?? this.age,
+      count: count ?? this.count,
       emergencyContact: emergencyContact ?? this.emergencyContact,
       emergencyPhone: emergencyPhone ?? this.emergencyPhone,
       medicalConditions: medicalConditions ?? this.medicalConditions,
@@ -102,19 +106,31 @@ class EventRegistration {
       participantEmail: json['participant_email'] ?? '',
       participantPhone: json['participant_phone'] ?? '',
       age: json['age'] ?? 0,
+      count: json['count']?? 0,
       emergencyContact: json['emergency_contact'] ?? '',
       emergencyPhone: json['emergency_phone'] ?? '',
       medicalConditions: json['medical_conditions'] ?? '',
       experienceLevel: json['experience_level'] ?? '',
-      submissionDate: DateTime.parse(json['submission_date'] ?? DateTime.now().toIso8601String()),
+      submissionDate: DateTime.parse(
+        json['submission_date'] ?? DateTime.now().toIso8601String(),
+      ),
       status: EventRegistrationStatus.values.firstWhere(
         (e) => e.toString() == 'EventRegistrationStatus.${json['status']}',
         orElse: () => EventRegistrationStatus.pending,
       ),
       rejectionReason: json['rejection_reason'],
-      approvalDate: json['approval_date'] != null ? DateTime.parse(json['approval_date']) : null,
-      confirmationDate: json['confirmation_date'] != null ? DateTime.parse(json['confirmation_date']) : null,
-      completionDate: json['completion_date'] != null ? DateTime.parse(json['completion_date']) : null,
+      approvalDate:
+          json['approval_date'] != null
+              ? DateTime.parse(json['approval_date'])
+              : null,
+      confirmationDate:
+          json['confirmation_date'] != null
+              ? DateTime.parse(json['confirmation_date'])
+              : null,
+      completionDate:
+          json['completion_date'] != null
+              ? DateTime.parse(json['completion_date'])
+              : null,
       hasAttended: json['has_attended'] ?? false,
       notes: json['notes'],
       additionalInfo: Map<String, dynamic>.from(json['additional_info'] ?? {}),
@@ -129,6 +145,7 @@ class EventRegistration {
       'participant_email': participantEmail,
       'participant_phone': participantPhone,
       'age': age,
+      'count': count,
       'emergency_contact': emergencyContact,
       'emergency_phone': emergencyPhone,
       'medical_conditions': medicalConditions,
@@ -145,7 +162,7 @@ class EventRegistration {
     };
   }
 
-  String get statusDisplayName {
+  String get activityStatus {
     switch (status) {
       case EventRegistrationStatus.pending:
         return 'Pending';

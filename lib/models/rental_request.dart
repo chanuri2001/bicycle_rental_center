@@ -2,46 +2,50 @@ enum RentalStatus { pending, approved, active, completed, rejected }
 
 class RentalRequest {
   final String id;
-  final String userId;
   final String userName;
   final String userEmail;
   final String userPhone;
-  final String bicycleId;
-  final String bicycleName;
-  final String bicycleModel;
+  final String? licenseNumber;
+  final List<Map<String, dynamic>> bikes;
   final DateTime submissionDate;
-  final DateTime startDate;
-  final DateTime endDate;
-  final int durationDays;
+  final DateTime pickupDate;
+  final DateTime returnDate;
   final double totalCost;
+  final double deposit;
+  final String paymentMethod;
+  final String? promoCode;
   final RentalStatus status;
-  final String? notes;
+  final bool termsAccepted;
+  final bool ageVerified;
+  final bool damageResponsibility;
   final DateTime? approvalDate;
-  final DateTime? pickupDate;
-  final DateTime? returnDate;
+  final DateTime? actualPickupDate;
+  final DateTime? actualReturnDate;
   final String? approvedBy;
   final String? rejectionReason;
   final Duration? activeTime;
 
   RentalRequest({
     required this.id,
-    required this.userId,
     required this.userName,
     required this.userEmail,
     required this.userPhone,
-    required this.bicycleId,
-    required this.bicycleName,
-    required this.bicycleModel,
+    this.licenseNumber,
+    required this.bikes,
     required this.submissionDate,
-    required this.startDate,
-    required this.endDate,
-    required this.durationDays,
+    required this.pickupDate,
+    required this.returnDate,
     required this.totalCost,
-    required this.status,
-    this.notes,
+    required this.deposit,
+    required this.paymentMethod,
+    this.promoCode,
+    this.status = RentalStatus.pending,
+    required this.termsAccepted,
+    required this.ageVerified,
+    required this.damageResponsibility,
     this.approvalDate,
-    this.pickupDate,
-    this.returnDate,
+    this.actualPickupDate,
+    this.actualReturnDate,
     this.approvedBy,
     this.rejectionReason,
     this.activeTime,
@@ -50,40 +54,36 @@ class RentalRequest {
   factory RentalRequest.fromJson(Map<String, dynamic> json) {
     return RentalRequest(
       id: json['id'] ?? '',
-      userId: json['user_id'] ?? '',
       userName: json['user_name'] ?? '',
       userEmail: json['user_email'] ?? '',
       userPhone: json['user_phone'] ?? '',
-      bicycleId: json['bicycle_id'] ?? '',
-      bicycleName: json['bicycle_name'] ?? '',
-      bicycleModel: json['bicycle_model'] ?? '',
-      submissionDate: DateTime.parse(
-        json['submission_date'] ?? DateTime.now().toIso8601String(),
-      ),
-      startDate: DateTime.parse(
-        json['start_date'] ?? DateTime.now().toIso8601String(),
-      ),
-      endDate: DateTime.parse(
-        json['end_date'] ?? DateTime.now().toIso8601String(),
-      ),
-      durationDays: json['duration_days'] ?? 1,
-      totalCost: (json['total_cost'] ?? 0.0).toDouble(),
+      licenseNumber: json['license_number'],
+      bikes: List<Map<String, dynamic>>.from(json['bikes'] ?? []),
+      submissionDate: DateTime.parse(json['submission_date']),
+      pickupDate: DateTime.parse(json['pickup_date']),
+      returnDate: DateTime.parse(json['return_date']),
+      totalCost: (json['total_cost'] ?? 0).toDouble(),
+      deposit: (json['deposit'] ?? 0).toDouble(),
+      paymentMethod: json['payment_method'] ?? 'card',
+      promoCode: json['promo_code'],
       status: RentalStatus.values.firstWhere(
-        (e) => e.toString().split('.').last == (json['status'] ?? 'pending'),
+        (e) => e.toString().split('.').last == json['status'],
         orElse: () => RentalStatus.pending,
       ),
-      notes: json['notes'],
+      termsAccepted: json['terms_accepted'] ?? false,
+      ageVerified: json['age_verified'] ?? false,
+      damageResponsibility: json['damage_responsibility'] ?? false,
       approvalDate:
           json['approval_date'] != null
               ? DateTime.parse(json['approval_date'])
               : null,
-      pickupDate:
-          json['pickup_date'] != null
-              ? DateTime.parse(json['pickup_date'])
+      actualPickupDate:
+          json['actual_pickup_date'] != null
+              ? DateTime.parse(json['actual_pickup_date'])
               : null,
-      returnDate:
-          json['return_date'] != null
-              ? DateTime.parse(json['return_date'])
+      actualReturnDate:
+          json['actual_return_date'] != null
+              ? DateTime.parse(json['actual_return_date'])
               : null,
       approvedBy: json['approved_by'],
       rejectionReason: json['rejection_reason'],
@@ -97,23 +97,25 @@ class RentalRequest {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'user_id': userId,
       'user_name': userName,
       'user_email': userEmail,
       'user_phone': userPhone,
-      'bicycle_id': bicycleId,
-      'bicycle_name': bicycleName,
-      'bicycle_model': bicycleModel,
+      'license_number': licenseNumber,
+      'bikes': bikes,
       'submission_date': submissionDate.toIso8601String(),
-      'start_date': startDate.toIso8601String(),
-      'end_date': endDate.toIso8601String(),
-      'duration_days': durationDays,
+      'pickup_date': pickupDate.toIso8601String(),
+      'return_date': returnDate.toIso8601String(),
       'total_cost': totalCost,
+      'deposit': deposit,
+      'payment_method': paymentMethod,
+      'promo_code': promoCode,
       'status': status.toString().split('.').last,
-      'notes': notes,
+      'terms_accepted': termsAccepted,
+      'age_verified': ageVerified,
+      'damage_responsibility': damageResponsibility,
       'approval_date': approvalDate?.toIso8601String(),
-      'pickup_date': pickupDate?.toIso8601String(),
-      'return_date': returnDate?.toIso8601String(),
+      'actual_pickup_date': actualPickupDate?.toIso8601String(),
+      'actual_return_date': actualReturnDate?.toIso8601String(),
       'approved_by': approvedBy,
       'rejection_reason': rejectionReason,
       'active_time': activeTime?.inSeconds,
@@ -122,63 +124,62 @@ class RentalRequest {
 
   RentalRequest copyWith({
     String? id,
-    String? userId,
     String? userName,
     String? userEmail,
     String? userPhone,
-    String? bicycleId,
-    String? bicycleName,
-    String? bicycleModel,
+    String? licenseNumber,
+    List<Map<String, dynamic>>? bikes,
     DateTime? submissionDate,
-    DateTime? startDate,
-    DateTime? endDate,
-    int? durationDays,
-    double? totalCost,
-    RentalStatus? status,
-    String? notes,
-    DateTime? approvalDate,
     DateTime? pickupDate,
     DateTime? returnDate,
+    double? totalCost,
+    double? deposit,
+    String? paymentMethod,
+    String? promoCode,
+    RentalStatus? status,
+    bool? termsAccepted,
+    bool? ageVerified,
+    bool? damageResponsibility,
+    DateTime? approvalDate,
+    DateTime? actualPickupDate,
+    DateTime? actualReturnDate,
     String? approvedBy,
     String? rejectionReason,
     Duration? activeTime,
   }) {
     return RentalRequest(
       id: id ?? this.id,
-      userId: userId ?? this.userId,
       userName: userName ?? this.userName,
       userEmail: userEmail ?? this.userEmail,
       userPhone: userPhone ?? this.userPhone,
-      bicycleId: bicycleId ?? this.bicycleId,
-      bicycleName: bicycleName ?? this.bicycleName,
-      bicycleModel: bicycleModel ?? this.bicycleModel,
+      licenseNumber: licenseNumber ?? this.licenseNumber,
+      bikes: bikes ?? this.bikes,
       submissionDate: submissionDate ?? this.submissionDate,
-      startDate: startDate ?? this.startDate,
-      endDate: endDate ?? this.endDate,
-      durationDays: durationDays ?? this.durationDays,
-      totalCost: totalCost ?? this.totalCost,
-      status: status ?? this.status,
-      notes: notes ?? this.notes,
-      approvalDate: approvalDate ?? this.approvalDate,
       pickupDate: pickupDate ?? this.pickupDate,
       returnDate: returnDate ?? this.returnDate,
+      totalCost: totalCost ?? this.totalCost,
+      deposit: deposit ?? this.deposit,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      promoCode: promoCode ?? this.promoCode,
+      status: status ?? this.status,
+      termsAccepted: termsAccepted ?? this.termsAccepted,
+      ageVerified: ageVerified ?? this.ageVerified,
+      damageResponsibility: damageResponsibility ?? this.damageResponsibility,
+      approvalDate: approvalDate ?? this.approvalDate,
+      actualPickupDate: actualPickupDate ?? this.actualPickupDate,
+      actualReturnDate: actualReturnDate ?? this.actualReturnDate,
       approvedBy: approvedBy ?? this.approvedBy,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       activeTime: activeTime ?? this.activeTime,
     );
   }
 
-  String get formattedSubmissionDate {
-    return '${submissionDate.day}/${submissionDate.month}/${submissionDate.year}';
-  }
-
-  String get formattedStartDate {
-    return '${startDate.day}/${startDate.month}/${startDate.year}';
-  }
-
-  String get formattedEndDate {
-    return '${endDate.day}/${endDate.month}/${endDate.year}';
-  }
+  String get formattedSubmissionDate =>
+      '${submissionDate.day}/${submissionDate.month}/${submissionDate.year}';
+  String get formattedPickupDate =>
+      '${pickupDate.day}/${pickupDate.month}/${pickupDate.year}';
+  String get formattedReturnDate =>
+      '${returnDate.day}/${returnDate.month}/${returnDate.year}';
 
   String get statusDisplayName {
     switch (status) {
@@ -197,9 +198,21 @@ class RentalRequest {
 
   String get formattedActiveTime {
     if (activeTime == null) return '00:00:00';
-    final hours = activeTime!.inHours;
-    final minutes = activeTime!.inMinutes % 60;
-    final seconds = activeTime!.inSeconds % 60;
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    return '${activeTime!.inHours.toString().padLeft(2, '0')}:'
+        '${(activeTime!.inMinutes % 60).toString().padLeft(2, '0')}:'
+        '${(activeTime!.inSeconds % 60).toString().padLeft(2, '0')}';
   }
+
+  String get bikesSummary {
+    if (bikes.isEmpty) return 'No bikes selected';
+    final bikeNames = bikes.map((b) => b['bike_model']).toSet().toList();
+    if (bikeNames.length == 1) return '1 ${bikeNames.first}';
+    return '${bikeNames.length} different bikes';
+  }
+
+  int get totalBikesCount {
+    return bikes.fold(0, (sum, bike) => sum + (bike['quantity'] as int));
+  }
+
+  Duration get rentalDuration => returnDate.difference(pickupDate);
 }

@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../utils/constants.dart';
 import '../../models/bicycle.dart';
+import '../../models/bike_type.dart';
 import 'add_edit_bicycle_screen.dart';
 
 class InventoryScreen extends StatefulWidget {
@@ -31,55 +32,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     await Future.delayed(const Duration(seconds: 1));
 
-    _bicycles = [
-      Bicycle(
-        id: '1',
-        name: 'Mountain Explorer Pro',
-        type: 'Mountain',
-        isAvailable: true,
-        pricePerHour: 15.0,
-        description: 'Professional mountain bike with advanced suspension',
-        imageUrl:
-            'https://hyperbicycles.com/cdn/shop/products/29in-hyper-explorer-mtb-hard-tail-blue_1_720x.jpg?v=1614987504',
-        count: 3,
-        condition: 'Excellent',
-      ),
-      Bicycle(
-        id: '2',
-        name: 'City Cruiser Deluxe',
-        type: 'City',
-        isAvailable: false,
-        pricePerHour: 10.0,
-        description: 'Comfortable city bike perfect for urban commuting',
-        imageUrl:
-            'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=400',
-        count: 2,
-        condition: 'Good',
-      ),
-      Bicycle(
-        id: '3',
-        name: 'Road Rocket Elite',
-        type: 'Road',
-        isAvailable: true,
-        pricePerHour: 22.0,
-        description: 'Ultra-lightweight racing bike with carbon fiber frame',
-        imageUrl: 'https://i.redd.it/34xhv0zdo6001.jpg',
-        count: 2,
-        condition: 'Excellent',
-      ),
-      Bicycle(
-        id: '4',
-        name: 'Electric Voyager',
-        type: 'Electric',
-        isAvailable: true,
-        pricePerHour: 28.0,
-        description: 'Power-assisted e-bike with 60-mile battery range',
-        imageUrl:
-            'https://content.syndigo.com/asset/003c74d4-a78e-4125-9f87-590f46062fb7/1500.jpg',
-        count: 1,
-        condition: 'Good',
-      ),
-    ];
+    _bicycles = BikeData.getAllBikes();
 
     setState(() {
       _isLoading = false;
@@ -90,23 +43,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
     List<Bicycle> filtered = _bicycles;
 
     if (_searchQuery.isNotEmpty) {
-      filtered =
-          filtered
-              .where(
-                (bicycle) =>
-                    bicycle.name.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ) ||
-                    bicycle.type.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ),
-              )
-              .toList();
+      filtered = filtered.where((bicycle) =>
+          bicycle.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          bicycle.brand.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          bicycle.type.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          bicycle.location.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
     }
 
     if (_selectedFilter != 'All') {
-      filtered =
-          filtered.where((bicycle) => bicycle.type == _selectedFilter).toList();
+      filtered = filtered.where((bicycle) => bicycle.type.name == _selectedFilter.toLowerCase()).toList();
     }
 
     return filtered;
@@ -156,7 +101,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             style: TextStyle(color: AppColors.textPrimary),
           ),
           content: Text(
-            'Are you sure you want to delete "${bicycle.name}"? This action cannot be undone.',
+            'Are you sure you want to delete "${bicycle.fullName}"? This action cannot be undone.',
             style: const TextStyle(color: AppColors.textSecondary),
           ),
           actions: [
@@ -251,78 +196,81 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children:
-                        ['All', 'Mountain', 'City', 'Road', 'Electric'].map((
-                          filter,
-                        ) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(filter),
-                              selected: _selectedFilter == filter,
-                              onSelected: (selected) {
-                                setState(() {
-                                  _selectedFilter = filter;
-                                });
-                              },
-                              backgroundColor: AppColors.cardBackground,
-                              selectedColor: AppColors.success.withOpacity(0.3),
-                              labelStyle: TextStyle(
-                                color:
-                                    _selectedFilter == filter
-                                        ? AppColors.success
-                                        : AppColors.textSecondary,
-                              ),
-                            ),
-                          );
-                        }).toList(),
+                    children: [
+                      'All',
+                      ...BikeType.values.map((type) => type.displayName)
+                    ].map((filter) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: FilterChip(
+                          label: Text(filter),
+                          selected: _selectedFilter == filter,
+                          onSelected: (selected) {
+                            setState(() {
+                              _selectedFilter = filter;
+                            });
+                          },
+                          backgroundColor: AppColors.cardBackground,
+                          selectedColor: AppColors.success.withOpacity(0.3),
+                          labelStyle: TextStyle(
+                            color: _selectedFilter == filter
+                                ? AppColors.success
+                                : AppColors.textSecondary,
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
               ],
             ),
           ),
           Expanded(
-            child:
-                _isLoading
-                    ? const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.success,
-                      ),
-                    )
-                    : _filteredBicycles.isEmpty
-                    ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.directions_bike,
-                            size: 64,
-                            color: AppColors.textSecondary.withOpacity(0.5),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _searchQuery.isNotEmpty || _selectedFilter != 'All'
-                                ? 'No bicycles match your search'
-                                : 'No bicycles in inventory',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                    : RefreshIndicator(
-                      onRefresh: _loadBicycles,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _filteredBicycles.length,
-                        itemBuilder: (context, index) {
-                          final bicycle = _filteredBicycles[index];
-                          return _buildBicycleCard(bicycle);
-                        },
-                      ),
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.success,
                     ),
+                  )
+                : _filteredBicycles.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.directions_bike,
+                              size: 64,
+                              color: AppColors.textSecondary.withOpacity(0.5),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _searchQuery.isNotEmpty || _selectedFilter != 'All'
+                                  ? 'No bicycles match your search'
+                                  : 'No bicycles in inventory',
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton(
+                              onPressed: _addBicycle,
+                              child: const Text('Add New Bicycle'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadBicycles,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _filteredBicycles.length,
+                          itemBuilder: (context, index) {
+                            final bicycle = _filteredBicycles[index];
+                            return _buildBicycleCard(bicycle);
+                          },
+                        ),
+                      ),
           ),
         ],
       ),
@@ -350,21 +298,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
               topRight: Radius.circular(AppConstants.borderRadius),
             ),
             child: Container(
-              height: 200,
+              height: 180,
               width: double.infinity,
               color: AppColors.darkBackground,
-              child:
-                  bicycle.imageFile != null
-                      ? Image.file(bicycle.imageFile!, fit: BoxFit.cover)
-                      : bicycle.imageUrl != null
-                      ? Image.network(
-                        bicycle.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _buildPlaceholderImage();
-                        },
-                      )
-                      : _buildPlaceholderImage(),
+              child: _getBikeImage(bicycle),
             ),
           ),
           Padding(
@@ -379,7 +316,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            bicycle.name,
+                            bicycle.fullName,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -388,7 +325,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            bicycle.type,
+                            bicycle.type.displayName,
                             style: const TextStyle(
                               fontSize: 14,
                               color: AppColors.textSecondary,
@@ -403,10 +340,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color:
-                            bicycle.isAvailable
-                                ? AppColors.success.withOpacity(0.2)
-                                : AppColors.danger.withOpacity(0.2),
+                        color: bicycle.isAvailable
+                            ? AppColors.success.withOpacity(0.2)
+                            : AppColors.danger.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -414,16 +350,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color:
-                              bicycle.isAvailable
-                                  ? AppColors.success
-                                  : AppColors.danger,
+                          color: bicycle.isAvailable
+                              ? AppColors.success
+                              : AppColors.danger,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
+                Text(
+                  'Location: ${bicycle.location}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Text(
                   bicycle.description,
                   style: const TextStyle(
@@ -433,17 +376,42 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Row(
                   children: [
-                    _buildInfoChip(
+                    _buildInventoryChip(
+                      '\$${bicycle.pricePerHour.toStringAsFixed(2)}/hr',
                       Icons.attach_money,
-                      '\$${bicycle.pricePerHour.toStringAsFixed(0)}/hr',
                     ),
                     const SizedBox(width: 8),
-                    _buildInfoChip(Icons.inventory, '${bicycle.count} units'),
+                    _buildInventoryChip(
+                      'Total: ${bicycle.totalCount}',
+                      Icons.inventory,
+                    ),
                     const SizedBox(width: 8),
-                    _buildInfoChip(Icons.star, bicycle.condition),
+                    _buildInventoryChip(
+                      'Avail: ${bicycle.availableCount}',
+                      Icons.check_circle,
+                      color: bicycle.availableCount > 0 
+                          ? AppColors.success 
+                          : AppColors.danger,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _buildInventoryChip(
+                      bicycle.condition,
+                      Icons.star,
+                    ),
+                    const Spacer(),
+                    if (bicycle.rentedCount > 0)
+                      _buildInventoryChip(
+                        'Rented: ${bicycle.rentedCount}',
+                        Icons.directions_bike,
+                        color: AppColors.warning,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -482,6 +450,49 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
+  Widget _buildInventoryChip(String text, IconData icon, {Color? color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.darkBackground,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: color ?? AppColors.textSecondary,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: color ?? AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _getBikeImage(Bicycle bike) {
+    if (bike.imageFile != null) {
+      return Image.file(bike.imageFile!, fit: BoxFit.cover);
+    } else if (bike.imageUrl != null) {
+      return Image.network(
+        bike.imageUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildPlaceholderImage();
+        },
+      );
+    }
+    return _buildPlaceholderImage();
+  }
+
   Widget _buildPlaceholderImage() {
     return Container(
       color: AppColors.darkBackground,
@@ -494,28 +505,63 @@ class _InventoryScreenState extends State<InventoryScreen> {
       ),
     );
   }
+}
 
-  Widget _buildInfoChip(IconData icon, String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.darkBackground,
-        borderRadius: BorderRadius.circular(8),
+class BikeData {
+  static List<Bicycle> getAllBikes() {
+    return [
+      Bicycle(
+        id: '1',
+        name: 'Trek 520',
+        brand: 'Trek',
+        type: BikeType.mountain,
+        location: 'Downtown Center',
+        pricePerHour: 15.99,
+        totalCount: 5,
+        availableCount: 3,
+        rentedCount: 2,
+        imageUrl: 'assets/images/mountain_bike.png',
+        description: 'Professional mountain bike with full suspension',
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: AppColors.textSecondary),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
+      Bicycle(
+        id: '2',
+        name: 'Allez',
+        brand: 'Specialized',
+        type: BikeType.road,
+        location: 'Park Center',
+        pricePerHour: 18.99,
+        totalCount: 4,
+        availableCount: 2,
+        rentedCount: 2,
+        imageUrl: 'assets/images/road_bike.png',
+        description: 'Lightweight road bike for speed',
       ),
-    );
+      Bicycle(
+        id: '3',
+        name: 'Urban Cruiser',
+        brand: 'Urban',
+        type: BikeType.hybrid,
+        location: 'Downtown Center',
+        pricePerHour: 20.99,
+        totalCount: 5,
+        availableCount: 3,
+        rentedCount: 2,
+        imageUrl: 'assets/images/hybrid_bike.png',
+        description: 'Comfortable hybrid for city riding',
+      ),
+      Bicycle(
+        id: '4',
+        name: 'Thunder X1',
+        brand: 'Thunder',
+        type: BikeType.electric,
+        location: 'Tech Hub',
+        pricePerHour: 45.99,
+        totalCount: 3,
+        availableCount: 1,
+        rentedCount: 2,
+        imageUrl: 'assets/images/electric_bike.png',
+        description: 'Powerful electric bike with long range',
+      ),
+    ];
   }
 }
