@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../models/bicycle.dart';
-import '../../models/bike_type.dart';
+
 import '../../models/rental_request.dart';
 import '../../models/event.dart';
 import '../events/event_registrations_screen.dart';
@@ -75,22 +75,19 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
       _events = [
         Event(
           id: '1',
-          name: 'Mountain Bike Rally',
-          title: 'Mountain Bike Rally',
-          description: 'Join us for an exciting mountain bike rally',
+          activityName: 'Mountain Bike Rally',
+          centerActivityUuid: 'CA-AC784B4744',
+          activityShortDescription: 'Join us for an exciting mountain bike rally',
           date: DateTime.now().add(const Duration(days: 7)),
           eventTime: DateTime.now().add(const Duration(days: 7)),
-          location: 'Mountain Trail Park',
+          centerName: 'Mountain Trail Park',
           maxParticipants: 50,
-          maxHeadCount: 50,
-          difficulty: 'Intermediate',
-          price: 25.0,
+          
+          activityTypeName: 'Intermediate',
+          
           imageUrl: 'https://example.com/mountain_rally.jpg',
           eligibilityCriteria: 'Age 16+, Basic cycling experience required',
-          availableDates: [
-            DateTime.now().add(const Duration(days: 7)).toString(),
-            DateTime.now().add(const Duration(days: 14)).toString(),
-          ],
+         
           durationHours: 4,
           features: [
             'Scenic trails',
@@ -113,7 +110,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
   void _navigateToEventRegistrations() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const EventRegistrationsScreen()),
+      MaterialPageRoute(builder: (context) => const EventRegistrationsScreen(eventId: '',)),
     );
   }
 
@@ -167,8 +164,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                             const SizedBox(height: 16),
 
                             // Inventory Status
-                            _buildInventoryStatus(),
-                            const SizedBox(height: 16),
+                           
 
                             // Recent Bookings
                             _buildRecentBookings(),
@@ -178,9 +174,8 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
                             _buildQuickActions(),
                             const SizedBox(height: 16),
 
-                            // Upcoming Events
-                            if (_events.isNotEmpty) _buildUpcomingEvents(),
-                            const SizedBox(height: 16),
+                           
+                          
                           ],
                         ),
                       ),
@@ -318,49 +313,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     );
   }
 
-  Widget _buildInventoryStatus() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Inventory Status',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildInventoryStatusItem(
-            'Mountain Bikes',
-            _bicycles.where((b) => b.type == BikeType.mountain).length,
-          ),
-          const SizedBox(height: 8),
-          _buildInventoryStatusItem(
-            'Road Bikes',
-            _bicycles.where((b) => b.type == BikeType.road).length,
-          ),
-          const SizedBox(height: 8),
-          _buildInventoryStatusItem(
-            'Electric Bikes',
-            _bicycles.where((b) => b.type == BikeType.electric).length,
-          ),
-          const SizedBox(height: 8),
-          _buildInventoryStatusItem(
-            'Hybrid Bikes',
-            _bicycles.where((b) => b.type == BikeType.hybrid).length,
-          ),
-        ],
-      ),
-    );
-  }
+  
 
   Widget _buildInventoryStatusItem(String type, int count) {
     return Row(
@@ -581,38 +534,7 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
     );
   }
 
-  Widget _buildUpcomingEvents() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Upcoming Events',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              TextButton(
-                onPressed: () => widget.onNavigateToTab?.call(4),
-                child: const Text(
-                  'View All',
-                  style: TextStyle(color: AppColors.primary),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ..._events.take(1).map(_buildEventCard),
-        ],
-      ),
-    );
-  }
+ 
 
   Widget _buildEventCard(Event event) {
     return Container(
@@ -642,17 +564,10 @@ class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  event.title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
+               
                 const SizedBox(height: 4),
                 Text(
-                  event.location,
+                  event.centerName,
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,

@@ -44,20 +44,20 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
 
   void _populateFields() {
     final event = widget.event!;
-    _nameController.text = event.name;
-    _titleController.text = event.title;
-    _descriptionController.text = event.description;
-    _locationController.text = event.location;
+    _nameController.text = event.activityName;
+    
+    _descriptionController.text = event.activityShortDescription;
+    _locationController.text = event.centerName;
     _maxParticipantsController.text = event.maxParticipants.toString();
     _eligibilityController.text = event.eligibilityCriteria;
     
-    _difficultyController.text = event.difficulty;
-    _priceController.text = event.price.toString();
+    _difficultyController.text = event.activityTypeName;
+   
     _featuresController.text = event.features.join(', ');
     _selectedDate = event.date;
     _selectedTime = TimeOfDay.fromDateTime(event.eventTime);
     _imageUrl = event.imageUrl;
-    _availableDates = event.availableDates;
+   
   }
 
   @override
@@ -216,24 +216,24 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
         id:
             widget.event?.id ??
             DateTime.now().millisecondsSinceEpoch.toString(),
-        name: _nameController.text.trim(),
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
+        activityName: _nameController.text.trim(),
+        
+        activityShortDescription: _descriptionController.text.trim(),
         date: eventDateTime,
         eventTime: eventDateTime,
-        location: _locationController.text.trim(),
+        centerName: _locationController.text.trim(),
         maxParticipants: int.parse(_maxParticipantsController.text),
-        maxHeadCount: int.parse(_maxParticipantsController.text),
+       
         
 
 
-        difficulty: _difficultyController.text.trim(),
-        price: double.parse(_priceController.text),
+        activityTypeName: _difficultyController.text.trim(),
+        
         imageUrl: finalImageUrl ?? '',
-        availableDates: _availableDates,
+        
         eligibilityCriteria: _eligibilityController.text.trim(),
         durationHours: int.parse(_durationController.text),
-        features: features,
+        features: features, centerActivityUuid: '',
       );
 
       Navigator.of(context).pop(event);

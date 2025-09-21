@@ -32,15 +32,15 @@ class _EventsScreenState extends State<EventsScreen> {
     _events = [
       Event(
         id: '1',
-        name: 'Mountain Bike Rally',
-        title: 'Mountain Bike Rally',
-        description:
+        activityName: 'Mountain Bike Rally',
+
+        activityShortDescription:
             'Join us for an exciting mountain bike rally through scenic trails',
         date: DateTime.now().add(const Duration(days: 7)),
         eventTime: DateTime.now().add(const Duration(days: 7)),
-        location: 'Mountain Trail Park',
+        centerName: 'Mountain Trail Park',
         maxParticipants: 50,
-        maxHeadCount: 50,
+
         eligibilityCriteria: 'Age 16+, Basic cycling experience required',
         durationHours: 4,
         features: [
@@ -48,50 +48,33 @@ class _EventsScreenState extends State<EventsScreen> {
           'Professional guides',
           'Safety equipment included',
         ],
-        difficulty: 'Intermediate',
-        price: 49.99,
+        activityTypeName: 'Intermediate',
+
         imageUrl:
-            'https://www.ambmag.com.au/wp-content/uploads/2025/06/Copy-of-NZ-MTB-RALLY-DAY-3-%C2%A9Mikhail-Huggins-@macca._h-83-2048x1365.jpg',
-        availableDates: [],
+            'https://www.ambmag.com.au/wp-content/uploads/2025/06/Copy-of-NZ-MTB-RALLY-DAY-3-%C2%A9Mikhail-Huggins-@macca._h-83-2048x1365.jpg', centerActivityUuid: '',
+        
       ),
       Event(
         id: '2',
-        name: 'City Cycling Tour',
-        title: 'City Cycling Tour',
-        description: 'Explore the city on two wheels with our guided tour',
+        activityName: 'City Cycling Tour',
+
+        activityShortDescription:
+            'Explore the city on two wheels with our guided tour',
         date: DateTime.now().add(const Duration(days: 14)),
         eventTime: DateTime.now().add(const Duration(days: 14)),
-        location: 'Downtown City Center',
+        centerName: 'Downtown City Center',
         maxParticipants: 30,
-        maxHeadCount: 30,
+
         eligibilityCriteria: 'Age 12+, No experience required',
         durationHours: 2,
         features: ['City landmarks', 'Photo stops', 'Local guide'],
-        difficulty: 'Easy',
-        price: 29.99,
+        activityTypeName: 'Easy',
+
         imageUrl:
-            'https://veronikasadventure.com/wp-content/uploads/2024/08/polonnaruwa-ancient-city-cycling-day-tour-from-negombo.jpg',
-        availableDates: [],
+            'https://veronikasadventure.com/wp-content/uploads/2024/08/polonnaruwa-ancient-city-cycling-day-tour-from-negombo.jpg', centerActivityUuid: '',
+        
       ),
-      Event(
-        id: '3',
-        name: 'Bike Maintenance Workshop',
-        title: 'Bike Maintenance Workshop',
-        description: 'Learn how to maintain and repair your bicycle',
-        date: DateTime.now().add(const Duration(days: 21)),
-        eventTime: DateTime.now().add(const Duration(days: 21)),
-        location: 'Bicycle Center Workshop',
-        maxParticipants: 20,
-        maxHeadCount: 20,
-        eligibilityCriteria: 'Age 14+, Bring your own bike',
-        durationHours: 3,
-        features: ['Hands-on learning', 'Tools provided', 'Take-home guide'],
-        difficulty: 'Beginner',
-        price: 39.99,
-        imageUrl:
-            'https://i0.wp.com/duluthfolkschool.com/wp-content/uploads/2023/05/Bike-Maintenance-Aug-2019-6.jpg?fit=1200%2C801&ssl=1',
-        availableDates: [],
-      ),
+     
     ];
 
     setState(() {
@@ -220,16 +203,6 @@ class _EventsScreenState extends State<EventsScreen> {
                 // Title and Date Badge
                 Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        event.title,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -265,7 +238,7 @@ class _EventsScreenState extends State<EventsScreen> {
 
                 // Description
                 Text(
-                  event.description,
+                  event.activityShortDescription,
                   style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
@@ -283,7 +256,6 @@ class _EventsScreenState extends State<EventsScreen> {
                     const SizedBox(width: 16),
                     _buildEventInfo(Icons.access_time, event.formattedTime),
                     const SizedBox(width: 16),
-                    _buildEventInfo(Icons.attach_money, '\$${event.price}'),
                   ],
                 ),
 
@@ -291,9 +263,9 @@ class _EventsScreenState extends State<EventsScreen> {
 
                 Row(
                   children: [
-                    _buildEventInfo(Icons.location_on, event.location),
+                    _buildEventInfo(Icons.location_on, event.centerName),
                     const SizedBox(width: 16),
-                    _buildEventInfo(Icons.straighten, event.difficulty),
+                    _buildEventInfo(Icons.straighten, event.activityTypeName),
                   ],
                 ),
 
@@ -453,7 +425,7 @@ class _EventsScreenState extends State<EventsScreen> {
             style: TextStyle(color: AppColors.textPrimary),
           ),
           content: Text(
-            'Are you sure you want to delete "${event.title}"? This action cannot be undone.',
+            'Are you sure you want to delete "${event.activityName}"? This action cannot be undone.',
             style: const TextStyle(color: AppColors.textSecondary),
           ),
           actions: [
@@ -472,7 +444,9 @@ class _EventsScreenState extends State<EventsScreen> {
                 });
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('${event.title} deleted successfully!'),
+                    content: Text(
+                      '${event.activityName} deleted successfully!',
+                    ),
                     backgroundColor: AppColors.danger,
                   ),
                 );

@@ -1,17 +1,24 @@
+import 'package:bicycle_rental_center/models/bicycle_meta.dart';
+import 'package:bicycle_rental_center/services/api_service.dart';
+import 'package:bicycle_rental_center/services/bicycle_service.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-import '../../utils/constants.dart';
 import '../../models/bicycle.dart';
-import '../../models/bike_type.dart';
-import 'package:uuid/uuid.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class AddEditBicycleScreen extends StatefulWidget {
   final Bicycle? bicycle;
+  final BicycleService bicycleService;
+  final String? centerUuid;
+  final String? centerName;
+  final Function? onDelete; // Add this callback
 
-  const AddEditBicycleScreen({super.key, this.bicycle});
+  const AddEditBicycleScreen({
+    super.key,
+    this.bicycle,
+    required this.bicycleService,
+    this.centerUuid,
+    this.centerName,
+    this.onDelete,
+  });
 
   @override
   State<AddEditBicycleScreen> createState() => _AddEditBicycleScreenState();
@@ -19,535 +26,412 @@ class AddEditBicycleScreen extends StatefulWidget {
 
 class _AddEditBicycleScreenState extends State<AddEditBicycleScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _brandController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _locationController = TextEditingController();
-  final _totalCountController = TextEditingController();
-  final _availableCountController = TextEditingController();
+  late Bicycle _currentBicycle;
+  String? _selectedType;
+  String? _selectedCondition;
+  String? _selectedMake;
+  String? _selectedModel;
+  int? _selectedMakeYear;
 
-  BikeType _selectedType = BikeType.mountain;
-  String _selectedCondition = 'Good';
-  File? _selectedImage;
-  String? _imageUrl;
-  bool _isLoading = false;
-
-  final List<String> _conditions = [
-    'Excellent',
-    'Good',
-    'Fair',
-    'Poor',
-    'Needs Repair'
-  ];
+  BicycleMeta? _bicycleMeta;
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    if (widget.bicycle != null) {
-      _populateFields();
-    }
-  }
-
-  void _populateFields() {
-    final bicycle = widget.bicycle!;
-    _nameController.text = bicycle.name;
-    _brandController.text = bicycle.brand;
-    _descriptionController.text = bicycle.description;
-    _priceController.text = bicycle.pricePerHour.toString();
-    _locationController.text = bicycle.location;
-    _totalCountController.text = bicycle.totalCount.toString();
-    _availableCountController.text = bicycle.availableCount.toString();
-    _selectedType = bicycle.type;
-    _selectedCondition = bicycle.condition;
-    _imageUrl = bicycle.imageUrl;
-    _selectedImage = bicycle.imageFile;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _brandController.dispose();
-    _descriptionController.dispose();
-    _priceController.dispose();
-    _locationController.dispose();
-    _totalCountController.dispose();
-    _availableCountController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickImage() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-
-      final source = await showDialog<ImageSource>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            backgroundColor: AppColors.cardBackground,
-            title: const Text(
-              'Select Image Source',
-              style: TextStyle(color: AppColors.textPrimary),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(
-                    Icons.camera_alt,
-                    color: AppColors.success,
-                  ),
-                  title: const Text(
-                    'Camera',
-                    style: TextStyle(color: AppColors.textPrimary),
-                  ),
-                  onTap: () => Navigator.pop(context, ImageSource.camera),
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.photo_library,
-                    color: AppColors.success,
-                  ),
-                  title: const Text(
-                    'Gallery',
-                    style: TextStyle(color: AppColors.textPrimary),
-                  ),
-                  onTap: () => Navigator.pop(context, ImageSource.gallery),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-
-      if (source != null) {
-        final XFile? image = await picker.pickImage(
-          source: source,
-          maxWidth: 1024,
-          maxHeight: 1024,
-          imageQuality: 80,
+    _currentBicycle = widget.bicycle ??
+        Bicycle(
+          id: '',
+          qrCode: '',
+          makeName: '',
+          modelName: '',
+          name: '',
+          brand: '',
+          types: '',
+          location: widget.centerName ?? '',
+          pricePerHour: 0.0,
+          description: '',
+          totalCount: 1,
+          availableCount: 1,
+          rentedCount: 0,
+          centerName: widget.centerName ?? '',
+          centerUuid: widget.centerUuid ?? '',
+          makeYear: DateTime.now().year,
+          condition: 'Good',
         );
 
-        if (image != null) {
-          setState(() {
-            _selectedImage = File(image.path);
-            _imageUrl = null;
-          });
-        }
-      }
-    } catch (e) {
-      _showSnackBar('Failed to pick image: $e', AppColors.danger);
-    }
+    _selectedType = _currentBicycle.types;
+    _loadBicycleMeta();
   }
 
-  Future<void> _saveBicycle() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _loadBicycleMeta() async {
     try {
-      final totalCount = int.parse(_totalCountController.text);
-      final availableCount = int.parse(_availableCountController.text);
-      
-      final bicycle = Bicycle(
-        id: widget.bicycle?.id ?? const Uuid().v4(),
-        name: _nameController.text.trim(),
-        brand: _brandController.text.trim(),
-        type: _selectedType,
-        location: _locationController.text.trim(),
-        pricePerHour: double.parse(_priceController.text),
-        description: _descriptionController.text.trim(),
-        imageUrl: _imageUrl,
-        imageFile: _selectedImage,
-        condition: _selectedCondition,
-        totalCount: totalCount,
-        availableCount: availableCount,
-        rentedCount: totalCount - availableCount,
-      );
-
-      Navigator.of(context).pop(bicycle);
-    } catch (e) {
-      _showSnackBar('Failed to save bicycle: $e', AppColors.danger);
-    } finally {
+      final meta = await widget.bicycleService.getBicycleMeta();
       setState(() {
+        _bicycleMeta = meta;
+        _selectedCondition = _findInitialValue(
+          meta.conditionStatus.map((e) => e.name).toList(),
+          _currentBicycle.condition,
+        );
+        _selectedMake = _findInitialValue(
+          meta.makes.map((e) => e.name).toList(),
+          _currentBicycle.makeName,
+        );
+        _selectedModel = _findInitialValue(
+          meta.models.map((e) => e.name).toList(),
+          _currentBicycle.modelName,
+        );
+        if (_currentBicycle.types.isNotEmpty) {
+          _selectedType = _currentBicycle.types;
+        } else if (meta.types.isNotEmpty) {
+          _selectedType = meta.types.first.name;
+        }
+        _selectedMakeYear = _currentBicycle.makeYear;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to load bicycle meta data: $e';
         _isLoading = false;
       });
     }
   }
 
-  void _showSnackBar(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  String? _findInitialValue(List<String> options, String? currentValue) {
+    if (currentValue == null || currentValue.isEmpty) return null;
+    return options.contains(currentValue) ? currentValue : null;
+  }
+
+  List<DropdownMenuItem<String>> _buildDropdownItems(List<String> options) {
+    return options
+        .map((value) => DropdownMenuItem(
+              value: value,
+              child: Text(
+                value,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ))
+        .toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.bicycle != null;
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.tealAccent),
+          ),
+        ),
+      );
+    }
+    
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Text(
+            _errorMessage!,
+            style: const TextStyle(color: Colors.redAccent, fontSize: 16),
+          ),
+        ),
+      );
+    }
+
+    final makes = _bicycleMeta?.makes.map((e) => e.name).toList() ?? [];
+    final models = _bicycleMeta?.models.map((e) => e.name).toList() ?? [];
+    final conditions = _bicycleMeta?.conditionStatus.map((e) => e.name).toList() ?? [];
+    final types = _bicycleMeta?.types.map((e) => e.name).toList() ?? [];
 
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(
-          isEditing ? 'Edit Bicycle' : 'Add New Bicycle',
-          style: const TextStyle(color: AppColors.textPrimary),
-        ),
-        backgroundColor: AppColors.darkBackground,
+        backgroundColor: Colors.black,
         elevation: 0,
+        title: Text(
+          widget.bicycle == null ? 'Add Bicycle' : 'Edit Bicycle',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFF4CAF50)),
         actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _saveBicycle,
-            child: Text(
-              'Save',
-              style: TextStyle(
-                color: _isLoading ? AppColors.textSecondary : AppColors.primary,
-                fontWeight: FontWeight.bold,
-              ),
+          if (widget.bicycle != null) // Show delete button only for existing bicycles
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.redAccent),
+              onPressed: _confirmDelete,
             ),
+          IconButton(
+            icon: const Icon(Icons.save, color:Color(0xFF4CAF50)),
+            onPressed: _saveBicycle,
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Bicycle Image',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  height: 200,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(
-                      AppConstants.borderRadius,
-                    ),
-                    border: Border.all(
-                      color: AppColors.textSecondary.withOpacity(0.3),
-                      width: 2,
-                    ),
-                  ),
-                  child: _selectedImage != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(
-                            AppConstants.borderRadius,
-                          ),
-                          child: Image.file(
-                            _selectedImage!,
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                      : _imageUrl != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(
-                                AppConstants.borderRadius,
-                              ),
-                              child: Image.network(
-                                _imageUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (
-                                  context,
-                                  error,
-                                  stackTrace,
-                                ) {
-                                  return _buildImagePlaceholder();
-                                },
-                              ),
-                            )
-                          : _buildImagePlaceholder(),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Basic Information',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _nameController,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Bicycle Model Name',
-                  prefixIcon: Icon(
-                    Icons.directions_bike,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter bicycle model name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _brandController,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Brand',
-                  prefixIcon: Icon(
-                    Icons.branding_watermark,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter brand';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<BikeType>(
-                value: _selectedType,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Bicycle Type',
-                  prefixIcon: Icon(
-                    Icons.category,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                dropdownColor: AppColors.cardBackground,
-                items: BikeType.values.map((type) {
-                  return DropdownMenuItem<BikeType>(
-                    value: type,
-                    child: Text(
-                      type.displayName,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedType = value;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _locationController,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Location',
-                  prefixIcon: Icon(
-                    Icons.location_on,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter location';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionController,
-                style: const TextStyle(color: AppColors.textPrimary),
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  prefixIcon: Icon(
-                    Icons.description,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Pricing & Inventory',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _priceController,
-                style: const TextStyle(color: AppColors.textPrimary),
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Price per Hour (\$)',
-                  prefixIcon: Icon(
-                    Icons.attach_money,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Enter price';
-                  }
-                  if (double.tryParse(value) == null ||
-                      double.parse(value) <= 0) {
-                    return 'Enter valid price';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _totalCountController,
-                      style: const TextStyle(color: AppColors.textPrimary),
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Total Count',
-                        prefixIcon: Icon(
-                          Icons.format_list_numbered,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter total count';
-                        }
-                        if (int.tryParse(value) == null ||
-                            int.parse(value) <= 0) {
-                          return 'Enter valid number';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _availableCountController,
-                      style: const TextStyle(color: AppColors.textPrimary),
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Available Count',
-                        prefixIcon: Icon(
-                          Icons.check_circle,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter available count';
-                        }
-                        if (int.tryParse(value) == null ||
-                            int.parse(value) < 0) {
-                          return 'Enter valid number';
-                        }
-                        final total = int.tryParse(_totalCountController.text) ?? 0;
-                        if (int.parse(value) > total) {
-                          return 'Cannot exceed total count';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _selectedCondition,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Condition',
-                  prefixIcon: Icon(
-                    Icons.star,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                dropdownColor: AppColors.cardBackground,
-                items: _conditions.map((condition) {
-                  return DropdownMenuItem<String>(
-                    value: condition,
-                    child: Text(
-                      condition,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedCondition = value;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveBicycle,
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : Text(
-                          isEditing ? 'Update Bicycle' : 'Add Bicycle',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF121212),
+              Colors.black,
             ],
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                _buildStyledTextFormField(
+                  initialValue: _currentBicycle.name,
+                  labelText: 'Name',
+                  validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                  onSaved: (value) => _currentBicycle = _currentBicycle.copyWith(name: value ?? ''),
+                ),
+                const SizedBox(height: 20),
+
+                _buildStyledDropdown(
+                  value: _selectedMake,
+                  items: _buildDropdownItems(makes),
+                  onChanged: (value) => setState(() => _selectedMake = value),
+                  labelText: 'Make',
+                  validator: (value) => value == null ? 'Please select a make' : null,
+                ),
+                const SizedBox(height: 20),
+
+                _buildStyledDropdown(
+                  value: _selectedModel,
+                  items: _buildDropdownItems(models),
+                  onChanged: (value) => setState(() => _selectedModel = value),
+                  labelText: 'Model',
+                  validator: (value) => value == null ? 'Please select a model' : null,
+                ),
+                const SizedBox(height: 20),
+
+                _buildStyledDropdown(
+                  value: _selectedType,
+                  items: _buildDropdownItems(types),
+                  onChanged: (value) => setState(() => _selectedType = value),
+                  labelText: 'Type',
+                  validator: (value) => value == null ? 'Please select a type' : null,
+                ),
+                const SizedBox(height: 20),
+
+                _buildStyledDropdown(
+                  value: _selectedCondition,
+                  items: _buildDropdownItems(conditions),
+                  onChanged: (value) => setState(() => _selectedCondition = value),
+                  labelText: 'Condition',
+                  validator: (value) => value == null ? 'Please select condition' : null,
+                ),
+                const SizedBox(height: 20),
+
+                _buildStyledTextFormField(
+                  initialValue: _currentBicycle.location,
+                  labelText: 'Location',
+                  validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                  onSaved: (value) => _currentBicycle = _currentBicycle.copyWith(location: value ?? ''),
+                ),
+                const SizedBox(height: 20),
+
+                _buildStyledTextFormField(
+                  initialValue: _currentBicycle.pricePerHour.toString(),
+                  labelText: 'Price per Hour',
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) return 'Required';
+                    if (double.tryParse(value!) == null) return 'Invalid number';
+                    return null;
+                  },
+                  onSaved: (value) => _currentBicycle = _currentBicycle.copyWith(
+                    pricePerHour: double.parse(value ?? '0'),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                _buildStyledTextFormField(
+                  initialValue: _currentBicycle.makeYear.toString(),
+                  labelText: 'Make Year',
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) return 'Required';
+                    if (int.tryParse(value!) == null) return 'Invalid year';
+                    return null;
+                  },
+                  onSaved: (value) => setState(() {
+                    _selectedMakeYear = int.parse(value ?? '${DateTime.now().year}');
+                  }),
+                ),
+                const SizedBox(height: 30),
+
+                ElevatedButton(
+                  onPressed: _saveBicycle,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF4CAF50),
+                    foregroundColor: Colors.black,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 5,
+                    shadowColor: Color(0xFF4CAF50).withOpacity(0.5),
+                  ),
+                  child: const Text(
+                    'Save Bicycle',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildImagePlaceholder() {
-    return const Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.add_a_photo, size: 48, color: AppColors.textSecondary),
-        SizedBox(height: 8),
-        Text(
-          'Tap to add image',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+  Widget _buildStyledTextFormField({
+    required String? initialValue,
+    required String labelText,
+    required String? Function(String?)? validator,
+    required void Function(String?)? onSaved,
+    TextInputType? keyboardType,
+  }) {
+    return TextFormField(
+      initialValue: initialValue,
+      style: const TextStyle(color: Colors.white),
+      cursorColor: Colors.tealAccent,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: labelText,
+        labelStyle: const TextStyle(color: Colors.grey),
+        enabledBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.grey),
+          borderRadius: BorderRadius.circular(10),
         ),
-      ],
+        focusedBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Color(0xFF4CAF50)),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.redAccent),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.redAccent),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        errorStyle: const TextStyle(color: Colors.redAccent),
+        filled: true,
+        fillColor: Colors.grey[900],
+      ),
+      validator: validator,
+      onSaved: onSaved,
+    );
+  }
+
+  Widget _buildStyledDropdown({
+    required String? value,
+    required List<DropdownMenuItem<String>> items,
+    required void Function(String?)? onChanged,
+    required String labelText,
+    required String? Function(String?)? validator,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      items: items,
+      onChanged: onChanged,
+      dropdownColor: Colors.grey[900],
+      icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF4CAF50)),
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: labelText,
+        labelStyle: const TextStyle(color: Colors.grey),
+        enabledBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.grey),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Color(0xFF4CAF50)),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.redAccent),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.redAccent),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        errorStyle: const TextStyle(color: Colors.redAccent),
+        filled: true,
+        fillColor: Colors.grey[900],
+      ),
+      validator: validator,
+    );
+  }
+
+  void _saveBicycle() {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      
+      _currentBicycle = _currentBicycle.copyWith(
+        types: _selectedType ?? '',
+        condition: _selectedCondition ?? 'Good',
+        makeName: _selectedMake ?? '',
+        modelName: _selectedModel ?? '',
+        makeYear: _selectedMakeYear ?? DateTime.now().year,
+      );
+      
+      Navigator.pop(context, _currentBicycle);
+    }
+  }
+
+  void _confirmDelete() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[900],
+          title: const Text(
+            'Delete Bicycle',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: Text(
+            'Are you sure you want to delete "${_currentBicycle.fullName}"?',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Color(0xFF4CAF50)),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                if (widget.onDelete != null) {
+                  widget.onDelete!();
+                }
+                Navigator.of(context).pop(true); // Return true to indicate deletion
+              },
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: Colors.redAccent),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

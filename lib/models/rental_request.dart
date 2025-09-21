@@ -1,4 +1,27 @@
-enum RentalStatus { pending, approved, active, completed, rejected }
+import 'package:intl/intl.dart';
+
+enum RentalStatus {
+  pending,
+  approved,
+  active,
+  completed,
+  rejected;
+
+  String get displayName {
+    switch (this) {
+      case RentalStatus.pending:
+        return 'Pending';
+      case RentalStatus.approved:
+        return 'Approved';
+      case RentalStatus.active:
+        return 'Active';
+      case RentalStatus.completed:
+        return 'Completed';
+      case RentalStatus.rejected:
+        return 'Rejected';
+    }
+  }
+}
 
 class RentalRequest {
   final String id;
@@ -7,6 +30,7 @@ class RentalRequest {
   final String userPhone;
   final String? licenseNumber;
   final List<Map<String, dynamic>> bikes;
+  final List<Map<String, dynamic>>? accessories;
   final DateTime submissionDate;
   final DateTime pickupDate;
   final DateTime returnDate;
@@ -24,6 +48,9 @@ class RentalRequest {
   final String? approvedBy;
   final String? rejectionReason;
   final Duration? activeTime;
+  final String? centerName;
+  final String? centerUuid;
+  final String? notes;
 
   RentalRequest({
     required this.id,
@@ -32,6 +59,7 @@ class RentalRequest {
     required this.userPhone,
     this.licenseNumber,
     required this.bikes,
+    this.accessories,
     required this.submissionDate,
     required this.pickupDate,
     required this.returnDate,
@@ -49,6 +77,9 @@ class RentalRequest {
     this.approvedBy,
     this.rejectionReason,
     this.activeTime,
+    this.centerName,
+    this.centerUuid,
+    this.notes,
   });
 
   factory RentalRequest.fromJson(Map<String, dynamic> json) {
@@ -59,6 +90,10 @@ class RentalRequest {
       userPhone: json['user_phone'] ?? '',
       licenseNumber: json['license_number'],
       bikes: List<Map<String, dynamic>>.from(json['bikes'] ?? []),
+      accessories:
+          json['accessories'] != null
+              ? List<Map<String, dynamic>>.from(json['accessories'])
+              : null,
       submissionDate: DateTime.parse(json['submission_date']),
       pickupDate: DateTime.parse(json['pickup_date']),
       returnDate: DateTime.parse(json['return_date']),
@@ -91,6 +126,9 @@ class RentalRequest {
           json['active_time'] != null
               ? Duration(seconds: json['active_time'])
               : null,
+      centerName: json['center_name'] ?? json['centerName'],
+      centerUuid: json['center_uuid'] ?? json['centerUuid'],
+      notes: json['notes'],
     );
   }
 
@@ -102,6 +140,7 @@ class RentalRequest {
       'user_phone': userPhone,
       'license_number': licenseNumber,
       'bikes': bikes,
+      'accessories': accessories,
       'submission_date': submissionDate.toIso8601String(),
       'pickup_date': pickupDate.toIso8601String(),
       'return_date': returnDate.toIso8601String(),
@@ -109,7 +148,7 @@ class RentalRequest {
       'deposit': deposit,
       'payment_method': paymentMethod,
       'promo_code': promoCode,
-      'status': status.toString().split('.').last,
+      'status': status.name,
       'terms_accepted': termsAccepted,
       'age_verified': ageVerified,
       'damage_responsibility': damageResponsibility,
@@ -119,6 +158,9 @@ class RentalRequest {
       'approved_by': approvedBy,
       'rejection_reason': rejectionReason,
       'active_time': activeTime?.inSeconds,
+      'center_name': centerName,
+      'center_uuid': centerUuid,
+      'notes': notes,
     };
   }
 
@@ -129,6 +171,7 @@ class RentalRequest {
     String? userPhone,
     String? licenseNumber,
     List<Map<String, dynamic>>? bikes,
+    List<Map<String, dynamic>>? accessories,
     DateTime? submissionDate,
     DateTime? pickupDate,
     DateTime? returnDate,
@@ -146,6 +189,9 @@ class RentalRequest {
     String? approvedBy,
     String? rejectionReason,
     Duration? activeTime,
+    String? centerName,
+    String? centerUuid,
+    String? notes,
   }) {
     return RentalRequest(
       id: id ?? this.id,
@@ -154,6 +200,7 @@ class RentalRequest {
       userPhone: userPhone ?? this.userPhone,
       licenseNumber: licenseNumber ?? this.licenseNumber,
       bikes: bikes ?? this.bikes,
+      accessories: accessories ?? this.accessories,
       submissionDate: submissionDate ?? this.submissionDate,
       pickupDate: pickupDate ?? this.pickupDate,
       returnDate: returnDate ?? this.returnDate,
@@ -171,30 +218,38 @@ class RentalRequest {
       approvedBy: approvedBy ?? this.approvedBy,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       activeTime: activeTime ?? this.activeTime,
+      centerName: centerName ?? this.centerName,
+      centerUuid: centerUuid ?? this.centerUuid,
+      notes: notes ?? this.notes,
     );
   }
 
-  String get formattedSubmissionDate =>
-      '${submissionDate.day}/${submissionDate.month}/${submissionDate.year}';
-  String get formattedPickupDate =>
-      '${pickupDate.day}/${pickupDate.month}/${pickupDate.year}';
-  String get formattedReturnDate =>
-      '${returnDate.day}/${returnDate.month}/${returnDate.year}';
-
-  String get statusDisplayName {
-    switch (status) {
-      case RentalStatus.pending:
-        return 'Pending';
-      case RentalStatus.approved:
-        return 'Approved';
-      case RentalStatus.active:
-        return 'Active';
-      case RentalStatus.completed:
-        return 'Completed';
-      case RentalStatus.rejected:
-        return 'Rejected';
+  // Helper method to find a specific bike in the booking
+  Map<String, dynamic>? findBike(String bikeId) {
+    try {
+      return bikes.firstWhere((bike) => bike['bike_id'] == bikeId);
+    } catch (e) {
+      return null;
     }
   }
+
+  // Helper method to find a specific accessory in the booking
+  Map<String, dynamic>? findAccessory(String accessoryId) {
+    if (accessories == null) return null;
+    try {
+      return accessories!.firstWhere((acc) => acc['id'] == accessoryId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Computed Getters
+  String get formattedSubmissionDate =>
+      DateFormat('dd/MM/yyyy').format(submissionDate);
+
+  String get formattedPickupDate => DateFormat('dd/MM/yyyy').format(pickupDate);
+
+  String get formattedReturnDate => DateFormat('dd/MM/yyyy').format(returnDate);
 
   String get formattedActiveTime {
     if (activeTime == null) return '00:00:00';
@@ -205,14 +260,106 @@ class RentalRequest {
 
   String get bikesSummary {
     if (bikes.isEmpty) return 'No bikes selected';
-    final bikeNames = bikes.map((b) => b['bike_model']).toSet().toList();
+    final bikeNames =
+        bikes.map((b) => b['bike_name'] ?? b['bike_model']).toSet().toList();
     if (bikeNames.length == 1) return '1 ${bikeNames.first}';
     return '${bikeNames.length} different bikes';
   }
 
+  String get accessoriesSummary {
+    if (accessories == null || accessories!.isEmpty) return 'No accessories';
+    final accessoryNames = accessories!.map((a) => a['name']).toSet().toList();
+    if (accessoryNames.length == 1) return '1 ${accessoryNames.first}';
+    return '${accessoryNames.length} different accessories';
+  }
+
   int get totalBikesCount {
-    return bikes.fold(0, (sum, bike) => sum + (bike['quantity'] as int));
+    return bikes.fold(0, (sum, bike) => sum + (bike['quantity'] as int? ?? 1));
+  }
+
+  int get totalAccessoriesCount {
+    if (accessories == null) return 0;
+    return accessories!.fold(
+      0,
+      (sum, acc) => sum + (acc['quantity'] as int? ?? 1),
+    );
   }
 
   Duration get rentalDuration => returnDate.difference(pickupDate);
+
+  String get statusDisplayName => status.displayName;
+
+  // Get total rental time for a specific bike
+  Duration? bikeRentalDuration(String bikeId) {
+    final bike = findBike(bikeId);
+    if (bike == null || bike['actualPickupTime'] == null) return null;
+
+    final pickupTime = bike['actualPickupTime'];
+    final returnTime = bike['actualReturnTime'] ?? DateTime.now();
+    return returnTime.difference(pickupTime);
+  }
+
+  // Get formatted rental time for a specific bike
+  String? formattedBikeRentalTime(String bikeId) {
+    final duration = bikeRentalDuration(bikeId);
+    if (duration == null) return null;
+
+    return '${duration.inHours}h ${duration.inMinutes.remainder(60)}m';
+  }
+
+  // Check if all bikes in the booking are returned
+  bool get allBikesReturned {
+    if (bikes.isEmpty) return false;
+    return bikes.every((bike) => bike['actualReturnTime'] != null);
+  }
+
+  // Check if all accessories in the booking are returned
+  bool get allAccessoriesReturned {
+    if (accessories == null || accessories!.isEmpty) return true;
+    return accessories!.every((acc) => acc['actualReturnTime'] != null);
+  }
+
+  // Check if all items (bikes and accessories) are returned
+  bool get allItemsReturned {
+    return allBikesReturned && allAccessoriesReturned;
+  }
+
+  // Check if some but not all bikes/accessories are picked up
+  bool get hasPartiallyPickedUpItems {
+    // Check if any bikes are picked up but not all
+    final anyBikesPickedUp = bikes.any((b) => b['actualPickupTime'] != null);
+    final allBikesPickedUp = bikes.every((b) => b['actualPickupTime'] != null);
+    final bikesPartiallyPickedUp = anyBikesPickedUp && !allBikesPickedUp;
+
+    // Check accessories if they exist
+    bool accessoriesPartiallyPickedUp = false;
+    if (accessories != null && accessories!.isNotEmpty) {
+      final anyAccessoriesPickedUp = accessories!.any(
+        (a) => a['actualPickupTime'] != null,
+      );
+      final allAccessoriesPickedUp = accessories!.every(
+        (a) => a['actualPickupTime'] != null,
+      );
+      accessoriesPartiallyPickedUp =
+          anyAccessoriesPickedUp && !allAccessoriesPickedUp;
+    }
+
+    return bikesPartiallyPickedUp || accessoriesPartiallyPickedUp;
+  }
+
+  // Check if any items are picked up
+  bool get hasAnyPickedUpItems {
+    final anyBikesPickedUp = bikes.any((b) => b['actualPickupTime'] != null);
+    final anyAccessoriesPickedUp =
+        accessories?.any((a) => a['actualPickupTime'] != null) ?? false;
+    return anyBikesPickedUp || anyAccessoriesPickedUp;
+  }
+
+  // Check if all items are picked up
+  bool get allItemsPickedUp {
+    final allBikesPickedUp = bikes.every((b) => b['actualPickupTime'] != null);
+    final allAccessoriesPickedUp =
+        accessories?.every((a) => a['actualPickupTime'] != null) ?? true;
+    return allBikesPickedUp && allAccessoriesPickedUp;
+  }
 }

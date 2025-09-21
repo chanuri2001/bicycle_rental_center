@@ -163,14 +163,7 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
                             color: Colors.black.withOpacity(0.7),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
-                            '\$${widget.activity.price.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                        
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -179,12 +172,12 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
                           ),
                           decoration: BoxDecoration(
                             color: _getDifficultyColor(
-                              widget.activity.difficulty,
+                              widget.activity.activityTypeName,
                             ),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            widget.activity.difficulty,
+                            widget.activity.activityTypeName,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -222,14 +215,7 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                widget.activity.title,
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
+                              
                               const SizedBox(height: 8),
                               Row(
                                 children: [
@@ -308,7 +294,7 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
                           child: _buildInfoCard(
                             Icons.location_on,
                             'Location',
-                            widget.activity.location,
+                            widget.activity.centerName,
                             Colors.red,
                           ),
                         ),
@@ -340,17 +326,17 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
                         children: [
                           Text(
                             _isDescriptionExpanded
-                                ? widget.activity.description
-                                : widget.activity.description.length > 100
-                                ? '${widget.activity.description.substring(0, 100)}...'
-                                : widget.activity.description,
+                                ? widget.activity.activityShortDescription
+                                : widget.activity.activityShortDescription.length > 100
+                                ? '${widget.activity.activityShortDescription.substring(0, 100)}...'
+                                : widget.activity.activityShortDescription,
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 16,
                               height: 1.5,
                             ),
                           ),
-                          if (widget.activity.description.length > 100) ...[
+                          if (widget.activity.activityShortDescription.length > 100) ...[
                             const SizedBox(height: 8),
                             GestureDetector(
                               onTap: () {
@@ -622,7 +608,7 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
             ),
             child: AlertDialog(
               title: Text(
-                'Book ${widget.activity.title}',
+                'Book ${widget.activity.activityName}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -647,13 +633,10 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
                     style: const TextStyle(color: Colors.white70),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'Price: \$${widget.activity.price.toStringAsFixed(2)}',
-                    style: const TextStyle(color: Colors.white70),
-                  ),
+                 
                   const SizedBox(height: 8),
                   Text(
-                    'Location: ${widget.activity.location}',
+                    'Location: ${widget.activity.centerName}',
                     style: const TextStyle(color: Colors.white70),
                   ),
                   if (widget.activity.eligibilityCriteria.isNotEmpty) ...[
@@ -679,7 +662,7 @@ class _ActivityDetailsScreenState extends State<ActivityDetailsScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          '${widget.activity.title} booked successfully!',
+                          '${widget.activity.activityName} booked successfully!',
                         ),
                         backgroundColor: const Color(0xFF4CAF50),
                       ),

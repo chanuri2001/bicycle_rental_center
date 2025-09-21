@@ -201,7 +201,7 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
                                       height: 90, // Reduced from 100
                                       width: double.infinity,
                                       color: Colors.grey.shade100,
-                                      child: _getBikeImage(bike),
+                                     
                                     ),
                                   ),
                                   Padding(
@@ -358,7 +358,7 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: _getBikeImage(selectedBike['bike']),
+                     
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -437,58 +437,9 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
     );
   }
 
-  Widget _getBikeImage(Bicycle bike) {
-    String imagePath;
-    switch (bike.type.name) {
-      case 'mountain':
-        imagePath =
-            'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=400&h=400&fit=crop&auto=format';
-        break;
-      case 'road':
-        imagePath =
-            'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=400&h=400&fit=crop&auto=format';
-        break;
-      case 'electric':
-        imagePath =
-            'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=400&h=400&fit=crop&auto=format';
-        break;
-      case 'hybrid':
-        imagePath =
-            'https://images.unsplash.com/photo-1502744688674-c619d1586c9e?w=400&h=400&fit=crop&auto=format';
-        break;
-      default:
-        imagePath =
-            'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=400&h=400&fit=crop&auto=format';
-    }
+  
 
-    return Image.network(
-      imagePath,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          color: Colors.grey.shade200,
-          child: Icon(
-            Icons.directions_bike,
-            size: 40,
-            color: Colors.grey.shade600,
-          ),
-        );
-      },
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Center(
-          child: CircularProgressIndicator(
-            value:
-                loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                    : null,
-            strokeWidth: 2,
-          ),
-        );
-      },
-    );
-  }
+   
 
   Widget _buildQuantityChip(String text, Color color) {
     return Container(
@@ -944,7 +895,7 @@ class _RentalFormScreenState extends State<RentalFormScreen> {
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: _getBikeImage(bike),
+                               
                               ),
                             ),
                             const SizedBox(width: 16),

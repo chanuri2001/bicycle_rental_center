@@ -9,7 +9,7 @@ import '../../models/event_registration.dart';
 import '../../models/event.dart';
 
 class EventRegistrationsScreen extends StatefulWidget {
-  const EventRegistrationsScreen({super.key});
+  const EventRegistrationsScreen({super.key, required String eventId});
 
   @override
   State<EventRegistrationsScreen> createState() =>
@@ -184,15 +184,15 @@ class _EventRegistrationsScreenState extends State<EventRegistrationsScreen>
     _events = [
       Event(
         id: '1',
-        name: 'Mountain Bike Rally',
-        title: 'Mountain Bike Rally',
-        description:
+        activityName: 'Mountain Bike Rally',
+
+        activityShortDescription:
             'Join us for an exciting mountain bike rally through scenic trails',
         date: DateTime.now().add(const Duration(days: 7)),
         eventTime: DateTime.now().add(const Duration(days: 7)),
-        location: 'Mountain Trail Park',
+        centerName: 'Mountain Trail Park',
         maxParticipants: 50,
-        maxHeadCount: 50,
+
         eligibilityCriteria: 'Age 16+, Basic cycling experience required',
         durationHours: 4,
         features: [
@@ -200,10 +200,9 @@ class _EventRegistrationsScreenState extends State<EventRegistrationsScreen>
           'Professional guides',
           'Safety equipment included',
         ],
-        difficulty: 'Intermediate',
-        price: 49.99,
-        imageUrl: 'https://example.com/rally.jpg',
-        availableDates: [],
+        activityTypeName: 'Intermediate',
+
+        imageUrl: 'https://example.com/rally.jpg', centerActivityUuid: '',
       ),
     ];
 
@@ -330,7 +329,7 @@ class _EventRegistrationsScreenState extends State<EventRegistrationsScreen>
       if (_selectedActivityTypeFilter != null) {
         final eventIds =
             _events
-                .where((e) => e.activityType == _selectedActivityTypeFilter)
+                .where((e) => e.activityTypeName == _selectedActivityTypeFilter)
                 .map((e) => e.id)
                 .toList();
         filtered = filtered.where((r) => eventIds.contains(r.eventId)).toList();
@@ -339,7 +338,9 @@ class _EventRegistrationsScreenState extends State<EventRegistrationsScreen>
       if (_selectedActivityStatusFilter != null) {
         final eventIds =
             _events
-                .where((e) => e.activityStatus == _selectedActivityStatusFilter)
+                .where(
+                  (e) => e.activityStatusName == _selectedActivityStatusFilter,
+                )
                 .map((e) => e.id)
                 .toList();
         filtered = filtered.where((r) => eventIds.contains(r.eventId)).toList();
@@ -636,21 +637,20 @@ class _EventRegistrationsScreenState extends State<EventRegistrationsScreen>
       orElse:
           () => Event(
             id: '',
-            name: 'Unknown Event',
-            title: 'Unknown Event',
-            description: '',
+            activityName: 'Unknown Event',
+
+            activityShortDescription: '',
             date: DateTime.now(),
             eventTime: DateTime.now(),
-            location: '',
+            centerName: '',
             maxParticipants: 0,
-            maxHeadCount: 0,
+
             eligibilityCriteria: '',
             durationHours: 0,
             features: [],
-            difficulty: '',
-            price: 0,
-            imageUrl: '',
-            availableDates: [],
+            activityTypeName: '',
+
+            imageUrl: '', centerActivityUuid: '',
           ),
     );
 
@@ -694,13 +694,7 @@ class _EventRegistrationsScreenState extends State<EventRegistrationsScreen>
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        event.title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
+
                       const SizedBox(height: 2),
                       Text(
                         'Age: ${registration.age} • ${registration.experienceLevel}',
@@ -805,12 +799,8 @@ class _EventRegistrationsScreenState extends State<EventRegistrationsScreen>
                       _buildEventDetailChip(
                         Icons.calendar_today,
                         DateFormat('MMM dd, yyyy').format(event.date),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildEventDetailChip(
-                        Icons.access_time,
-                        DateFormat('hh:mm a').format(event.eventTime),
-                      ),
+                      ),const SizedBox(width: 8),
+                     
                       const SizedBox(width: 8),
                       _buildEventDetailChip(
                         Icons.timer,
@@ -819,7 +809,7 @@ class _EventRegistrationsScreenState extends State<EventRegistrationsScreen>
                     ],
                   ),
                   const SizedBox(height: 8),
-                  _buildEventDetailChip(Icons.location_on, event.location),
+                  _buildEventDetailChip(Icons.location_on, event.centerName),
                   const SizedBox(height: 8),
                   if (event.features.isNotEmpty)
                     Wrap(
@@ -1576,10 +1566,6 @@ class _EventRegistrationsScreenState extends State<EventRegistrationsScreen>
                 ),
                 ..._events.map(
                   (event) => ListTile(
-                    title: Text(
-                      event.title,
-                      style: const TextStyle(color: AppColors.textPrimary),
-                    ),
                     leading: Radio<String>(
                       value: event.id,
                       groupValue: _selectedEventFilter,

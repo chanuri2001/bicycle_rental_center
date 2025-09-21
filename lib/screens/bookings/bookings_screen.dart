@@ -15,48 +15,52 @@ class _BookingsScreenState extends State<BookingsScreen>
   late TabController _tabController;
   List<RentalRequest> _allBookings = [];
   bool _isLoading = true;
-  Timer? _activeTimer;
+  Timer? _timer;
+  Map<String, Duration> _activeTimers = {};
 
-  // Filter variables for pending bookings
-  DateTime? _submissionDateFilter;
+  // Filter variables
   DateTime? _pickupDateFilter;
+  DateTime? _returnDateFilter;
   String _searchQuery = '';
+  bool _showPartiallyPickedUp = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
     _loadBookings();
-    _startActiveTimer();
+    _startTimer();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _activeTimer?.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
-  void _startActiveTimer() {
-    _activeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
-        // Update active timers
-        for (int i = 0; i < _allBookings.length; i++) {
-          if (_allBookings[i].status == RentalStatus.active &&
-              _allBookings[i].actualPickupDate != null) {
+        // Update active timers for each bicycle in active bookings
+        for (var booking in _allBookings.where(
+          (b) => b.status == RentalStatus.active,
+        )) {
+          for (var bike in booking.bikes.where(
+            (b) =>
+                b['actualPickupTime'] != null && b['actualReturnTime'] == null,
+          )) {
+            final bikeKey = '${booking.id}_${bike['bike_id']}';
+            final pickupTime = bike['actualPickupTime'];
             final currentTime = DateTime.now();
-            final pickupTime = _allBookings[i].actualPickupDate!;
             final activeTime = currentTime.difference(pickupTime);
 
-            _allBookings[i] = _allBookings[i].copyWith(activeTime: activeTime);
+            _activeTimers[bikeKey] = activeTime;
 
-            // Check if rental period is completed
-            if (_allBookings[i].actualReturnDate == null &&
-                currentTime.isAfter(_allBookings[i].returnDate)) {
-              _allBookings[i] = _allBookings[i].copyWith(
-                status: RentalStatus.completed,
-                actualReturnDate: currentTime,
-              );
+            // Check if rental period is completed for this bicycle
+            if (currentTime.isAfter(booking.returnDate)) {
+              bike['actualReturnTime'] = currentTime;
+              _activeTimers.remove(bikeKey);
             }
           }
         }
@@ -71,7 +75,7 @@ class _BookingsScreenState extends State<BookingsScreen>
 
     await Future.delayed(const Duration(seconds: 1));
 
-    // Mock data
+    // Mock data with separate accessories
     _allBookings = [
       RentalRequest(
         id: '1',
@@ -86,13 +90,50 @@ class _BookingsScreenState extends State<BookingsScreen>
             'bike_model': 'Trek X-Caliber',
             'quantity': 1,
             'daily_rate': 25.0,
+            'actualPickupTime': null,
+            'actualReturnTime': null,
+          },
+          {
+            'bike_id': 'bike2',
+            'bike_name': 'City Cruiser',
+            'bike_model': 'Giant Escape',
+            'quantity': 1,
+            'daily_rate': 20.0,
+            'actualPickupTime': null,
+            'actualReturnTime': null,
+          },
+        ],
+        accessories: [
+          {
+            'id': 'acc1',
+            'name': 'Helmet',
+            'price': 5.0,
+            'quantity': 2,
+            'actualPickupTime': null,
+            'actualReturnTime': null,
+          },
+          {
+            'id': 'acc2',
+            'name': 'Lock',
+            'price': 3.0,
+            'quantity': 1,
+            'actualPickupTime': null,
+            'actualReturnTime': null,
+          },
+          {
+            'id': 'acc3',
+            'name': 'Insurance',
+            'price': 10.0,
+            'quantity': 1,
+            'actualPickupTime': null,
+            'actualReturnTime': null,
           },
         ],
         submissionDate: DateTime.now().subtract(const Duration(days: 2)),
         pickupDate: DateTime.now().add(const Duration(days: 1)),
         returnDate: DateTime.now().add(const Duration(days: 3)),
-        totalCost: 50.0,
-        deposit: 100.0,
+        totalCost: 135.0,
+        deposit: 200.0,
         paymentMethod: 'card',
         status: RentalStatus.pending,
         termsAccepted: true,
@@ -107,24 +148,60 @@ class _BookingsScreenState extends State<BookingsScreen>
         licenseNumber: 'DL987654321',
         bikes: [
           {
-            'bike_id': 'bike2',
-            'bike_name': 'City Cruiser',
-            'bike_model': 'Giant Escape',
+            'bike_id': 'bike3',
+            'bike_name': 'Speed Demon',
+            'bike_model': 'Specialized Allez',
+            'quantity': 2,
+            'daily_rate': 30.0,
+            'actualPickupTime': DateTime.now().subtract(
+              const Duration(hours: 2),
+            ),
+            'actualReturnTime': null,
+          },
+          {
+            'bike_id': 'bike4',
+            'bike_name': 'Urban Rider',
+            'bike_model': 'Cannondale Quick',
             'quantity': 1,
-            'daily_rate': 20.0,
+            'daily_rate': 25.0,
+            'actualPickupTime': null,
+            'actualReturnTime': null,
+          },
+        ],
+        accessories: [
+          {
+            'id': 'acc4',
+            'name': 'Helmet',
+            'price': 5.0,
+            'quantity': 2,
+            'actualPickupTime': DateTime.now().subtract(
+              const Duration(hours: 2),
+            ),
+            'actualReturnTime': null,
+          },
+          {
+            'id': 'acc5',
+            'name': 'Insurance',
+            'price': 10.0,
+            'quantity': 2,
+            'actualPickupTime': DateTime.now().subtract(
+              const Duration(hours: 2),
+            ),
+            'actualReturnTime': null,
           },
         ],
         submissionDate: DateTime.now().subtract(const Duration(days: 1)),
         pickupDate: DateTime.now(),
-        returnDate: DateTime.now().add(const Duration(days: 1)),
-        totalCost: 20.0,
-        deposit: 80.0,
+        returnDate: DateTime.now().add(const Duration(days: 2)),
+        totalCost: 180.0,
+        deposit: 300.0,
         paymentMethod: 'card',
-        status: RentalStatus.approved,
+        status: RentalStatus.active,
         termsAccepted: true,
         ageVerified: true,
         damageResponsibility: true,
-        approvalDate: DateTime.now().subtract(const Duration(hours: 2)),
+        approvalDate: DateTime.now().subtract(const Duration(hours: 3)),
+        actualPickupDate: DateTime.now().subtract(const Duration(hours: 2)),
         approvedBy: 'Admin',
       ),
       RentalRequest(
@@ -135,60 +212,76 @@ class _BookingsScreenState extends State<BookingsScreen>
         licenseNumber: 'DL456789123',
         bikes: [
           {
-            'bike_id': 'bike3',
-            'bike_name': 'Speed Demon',
-            'bike_model': 'Specialized Allez',
-            'quantity': 1,
-            'daily_rate': 30.0,
-          },
-        ],
-        submissionDate: DateTime.now().subtract(const Duration(days: 3)),
-        pickupDate: DateTime.now().subtract(const Duration(hours: 2)),
-        returnDate: DateTime.now().add(const Duration(hours: 22)),
-        totalCost: 30.0,
-        deposit: 120.0,
-        paymentMethod: 'card',
-        status: RentalStatus.active,
-        termsAccepted: true,
-        ageVerified: true,
-        damageResponsibility: true,
-        approvalDate: DateTime.now().subtract(const Duration(days: 1)),
-        actualPickupDate: DateTime.now().subtract(const Duration(hours: 2)),
-        approvedBy: 'Admin',
-        activeTime: const Duration(hours: 2),
-      ),
-      RentalRequest(
-        id: '4',
-        userName: 'Sarah Wilson',
-        userEmail: 'sarah@example.com',
-        userPhone: '+1234567893',
-        licenseNumber: 'DL789123456',
-        bikes: [
-          {
-            'bike_id': 'bike4',
+            'bike_id': 'bike5',
             'bike_name': 'Urban Rider',
             'bike_model': 'Cannondale Quick',
             'quantity': 1,
             'daily_rate': 25.0,
+            'actualPickupTime': DateTime.now().subtract(
+              const Duration(days: 1, hours: 2),
+            ),
+            'actualReturnTime': DateTime.now().subtract(
+              const Duration(hours: 2),
+            ),
+          },
+          {
+            'bike_id': 'bike6',
+            'bike_name': 'Kids Bike',
+            'bike_model': 'Trek Precaliber',
+            'quantity': 1,
+            'daily_rate': 15.0,
+            'actualPickupTime': DateTime.now().subtract(
+              const Duration(days: 1),
+            ),
+            'actualReturnTime': DateTime.now().subtract(
+              const Duration(hours: 4),
+            ),
           },
         ],
-        submissionDate: DateTime.now().subtract(const Duration(days: 5)),
-        pickupDate: DateTime.now().subtract(const Duration(days: 2)),
-        returnDate: DateTime.now().subtract(const Duration(days: 1)),
-        totalCost: 25.0,
-        deposit: 100.0,
+        accessories: [
+          {
+            'id': 'acc6',
+            'name': 'Helmet',
+            'price': 5.0,
+            'quantity': 1,
+            'actualPickupTime': DateTime.now().subtract(
+              const Duration(days: 1, hours: 2),
+            ),
+            'actualReturnTime': DateTime.now().subtract(
+              const Duration(hours: 2),
+            ),
+          },
+        ],
+        submissionDate: DateTime.now().subtract(const Duration(days: 3)),
+        pickupDate: DateTime.now().subtract(const Duration(days: 1)),
+        returnDate: DateTime.now().add(const Duration(hours: 10)),
+        totalCost: 85.0,
+        deposit: 150.0,
         paymentMethod: 'card',
         status: RentalStatus.completed,
         termsAccepted: true,
         ageVerified: true,
         damageResponsibility: true,
-        approvalDate: DateTime.now().subtract(const Duration(days: 3)),
-        actualPickupDate: DateTime.now().subtract(const Duration(days: 2)),
-        actualReturnDate: DateTime.now().subtract(const Duration(days: 1)),
+        approvalDate: DateTime.now().subtract(const Duration(days: 2)),
+        actualPickupDate: DateTime.now().subtract(const Duration(days: 1)),
+        actualReturnDate: DateTime.now().subtract(const Duration(hours: 2)),
         approvedBy: 'Admin',
-        activeTime: const Duration(hours: 24),
       ),
     ];
+
+    // Initialize active timers for already active bikes
+    for (var booking in _allBookings.where(
+      (b) => b.status == RentalStatus.active,
+    )) {
+      for (var bike in booking.bikes.where(
+        (b) => b['actualPickupTime'] != null && b['actualReturnTime'] == null,
+      )) {
+        final bikeKey = '${booking.id}_${bike['bike_id']}';
+        _activeTimers[bikeKey] = DateTime.now().difference(
+          bike['actualPickupTime'],
+        );
+      }
+    }
 
     setState(() {
       _isLoading = false;
@@ -217,36 +310,10 @@ class _BookingsScreenState extends State<BookingsScreen>
               .toList();
     }
 
-    return filtered;
-  }
-
-  List<RentalRequest> _getBookingsByStatus(RentalStatus? status) {
-    if (status == null) return _filteredBookings;
-    return _filteredBookings
-        .where((booking) => booking.status == status)
-        .toList();
-  }
-
-  List<RentalRequest> get _pendingBookingsFiltered {
-    List<RentalRequest> pending = _getBookingsByStatus(RentalStatus.pending);
-
-    if (_submissionDateFilter != null) {
-      pending =
-          pending
-              .where(
-                (booking) =>
-                    booking.submissionDate.year ==
-                        _submissionDateFilter!.year &&
-                    booking.submissionDate.month ==
-                        _submissionDateFilter!.month &&
-                    booking.submissionDate.day == _submissionDateFilter!.day,
-              )
-              .toList();
-    }
-
+    // Apply date filters
     if (_pickupDateFilter != null) {
-      pending =
-          pending
+      filtered =
+          filtered
               .where(
                 (booking) =>
                     booking.pickupDate.year == _pickupDateFilter!.year &&
@@ -256,7 +323,34 @@ class _BookingsScreenState extends State<BookingsScreen>
               .toList();
     }
 
-    return pending;
+    if (_returnDateFilter != null) {
+      filtered =
+          filtered
+              .where(
+                (booking) =>
+                    booking.returnDate.year == _returnDateFilter!.year &&
+                    booking.returnDate.month == _returnDateFilter!.month &&
+                    booking.returnDate.day == _returnDateFilter!.day,
+              )
+              .toList();
+    }
+
+    return filtered;
+  }
+
+  List<RentalRequest> _getBookingsByStatus(RentalStatus? status) {
+    if (status == null) return _filteredBookings;
+
+    if (status == RentalStatus.approved) {
+      // For approved tab, show all approved bookings
+      return _filteredBookings
+          .where((booking) => booking.status == status)
+          .toList();
+    }
+
+    return _filteredBookings
+        .where((booking) => booking.status == status)
+        .toList();
   }
 
   @override
@@ -305,32 +399,75 @@ class _BookingsScreenState extends State<BookingsScreen>
       ),
       body: Column(
         children: [
-          // Search Bar
+          // Search and Filter Bar
           Container(
             padding: const EdgeInsets.all(16),
-            child: TextField(
-              style: const TextStyle(color: AppColors.textPrimary),
-              decoration: InputDecoration(
-                hintText: 'Search bookings...',
-                hintStyle: const TextStyle(color: AppColors.textSecondary),
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: AppColors.textSecondary,
-                ),
-                filled: true,
-                fillColor: AppColors.cardBackground,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppConstants.borderRadius,
+            child: Column(
+              children: [
+                TextField(
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'Search bookings...',
+                    hintStyle: const TextStyle(color: AppColors.textSecondary),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppColors.textSecondary,
+                    ),
+                    filled: true,
+                    fillColor: AppColors.cardBackground,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.borderRadius,
+                      ),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
-                  borderSide: BorderSide.none,
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
                 ),
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildDateFilter(
+                        'Pickup Date',
+                        _pickupDateFilter,
+                        (date) => setState(() => _pickupDateFilter = date),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildDateFilter(
+                        'Return Date',
+                        _returnDateFilter,
+                        (date) => setState(() => _returnDateFilter = date),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (_pickupDateFilter != null || _returnDateFilter != null)
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _pickupDateFilter = null;
+                            _returnDateFilter = null;
+                          });
+                        },
+                        child: const Text(
+                          'Clear Filters',
+                          style: TextStyle(color: AppColors.primary),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
             ),
           ),
 
@@ -346,96 +483,32 @@ class _BookingsScreenState extends State<BookingsScreen>
                     : TabBarView(
                       controller: _tabController,
                       children: [
-                        _buildAllBookingsTab(),
-                        _buildPendingBookingsTab(),
-                        _buildApprovedBookingsTab(),
-                        _buildActiveBookingsTab(),
-                        _buildCompletedBookingsTab(),
+                        _buildBookingsList(
+                          _filteredBookings,
+                          showAllActions: true,
+                        ),
+                        _buildBookingsList(
+                          _getBookingsByStatus(RentalStatus.pending),
+                          showPendingActions: true,
+                        ),
+                        _buildBookingsList(
+                          _getBookingsByStatus(RentalStatus.approved),
+                          showApprovedActions: true,
+                          showPartiallyPickedUpFilter: true,
+                        ),
+                        _buildBookingsList(
+                          _getBookingsByStatus(RentalStatus.active),
+                          showActiveActions: true,
+                        ),
+                        _buildBookingsList(
+                          _getBookingsByStatus(RentalStatus.completed),
+                        ),
                       ],
                     ),
           ),
         ],
       ),
     );
-  }
-
-  Widget _buildAllBookingsTab() {
-    return _buildBookingsList(_filteredBookings, showAllActions: true);
-  }
-
-  Widget _buildPendingBookingsTab() {
-    return Column(
-      children: [
-        // Filter Section
-        Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildDateFilter(
-                      'Submission Date',
-                      _submissionDateFilter,
-                      (date) => setState(() => _submissionDateFilter = date),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildDateFilter(
-                      'Pickup Date',
-                      _pickupDateFilter,
-                      (date) => setState(() => _pickupDateFilter = date),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _submissionDateFilter = null;
-                        _pickupDateFilter = null;
-                      });
-                    },
-                    child: const Text(
-                      'Clear Filters',
-                      style: TextStyle(color: AppColors.primary),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: _buildBookingsList(
-            _pendingBookingsFiltered,
-            showPendingActions: true,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildApprovedBookingsTab() {
-    return _buildBookingsList(
-      _getBookingsByStatus(RentalStatus.approved),
-      showApprovedActions: true,
-    );
-  }
-
-  Widget _buildActiveBookingsTab() {
-    return _buildBookingsList(
-      _getBookingsByStatus(RentalStatus.active),
-      showActiveActions: true,
-    );
-  }
-
-  Widget _buildCompletedBookingsTab() {
-    return _buildBookingsList(_getBookingsByStatus(RentalStatus.completed));
   }
 
   Widget _buildDateFilter(
@@ -500,6 +573,63 @@ class _BookingsScreenState extends State<BookingsScreen>
   }
 
   Widget _buildBookingsList(
+    List<RentalRequest> bookings, {
+    bool showAllActions = false,
+    bool showPendingActions = false,
+    bool showApprovedActions = false,
+    bool showActiveActions = false,
+    bool showPartiallyPickedUpFilter = false,
+  }) {
+    if (showPartiallyPickedUpFilter) {
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              children: [
+                const Text(
+                  'Show partially picked up:',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+                Switch(
+                  value: _showPartiallyPickedUp,
+                  onChanged: (value) {
+                    setState(() {
+                      _showPartiallyPickedUp = value;
+                    });
+                  },
+                  activeColor: AppColors.primary,
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _buildBookingListContent(
+              _showPartiallyPickedUp
+                  ? bookings
+                  : bookings
+                      .where((b) => !b.hasPartiallyPickedUpItems)
+                      .toList(),
+              showAllActions: showAllActions,
+              showPendingActions: showPendingActions,
+              showApprovedActions: showApprovedActions,
+              showActiveActions: showActiveActions,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return _buildBookingListContent(
+      bookings,
+      showAllActions: showAllActions,
+      showPendingActions: showPendingActions,
+      showApprovedActions: showApprovedActions,
+      showActiveActions: showActiveActions,
+    );
+  }
+
+  Widget _buildBookingListContent(
     List<RentalRequest> bookings, {
     bool showAllActions = false,
     bool showPendingActions = false,
@@ -594,25 +724,168 @@ class _BookingsScreenState extends State<BookingsScreen>
             _buildInfoRow(Icons.email, booking.userEmail),
             _buildInfoRow(Icons.phone, booking.userPhone),
             if (booking.licenseNumber != null)
-              _buildInfoRow(Icons.phone, booking.licenseNumber!),
+              _buildInfoRow(Icons.badge, booking.licenseNumber!),
 
             const SizedBox(height: 8),
 
-            // Bikes summary
-            Text(
-              booking.bikesSummary,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
+            // Bikes section
+            const Text(
+              'Bicycles:',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            Text(
-              'Total bikes: ${booking.totalBikesCount}',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-              ),
+            const SizedBox(height: 4),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var bike in booking.bikes)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            '${bike['bike_name']} (${bike['quantity']}x)',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (bike['actualPickupTime'] != null)
+                            IconButton(
+                              icon: const Icon(Icons.timer, size: 16),
+                              onPressed:
+                                  () => _showBikeTimingDetails(bike, booking),
+                            ),
+                        ],
+                      ),
+                      if (bike['actualPickupTime'] != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.timer,
+                                size: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                bike['actualReturnTime'] != null
+                                    ? 'Returned at ${_formatTime(bike['actualReturnTime'])}'
+                                    : 'Active for ${_formatDuration(_getActiveDuration(booking, bike))}',
+                                style: TextStyle(
+                                  color:
+                                      bike['actualReturnTime'] != null
+                                          ? AppColors.success
+                                          : AppColors.warning,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              if (bike['actualReturnTime'] == null &&
+                                  (booking.status == RentalStatus.active ||
+                                      booking.status == RentalStatus.approved))
+                                TextButton(
+                                  onPressed:
+                                      () => _markBikeAsReturned(booking, bike),
+                                  child: const Text(
+                                    'Mark as Returned',
+                                    style: TextStyle(
+                                      color: AppColors.success,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                Text(
+                  'Total bikes: ${booking.totalBikesCount}',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
+
+            const SizedBox(height: 8),
+
+            // Accessories section
+            if (booking.accessories != null && booking.accessories!.isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Accessories:',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Column(
+                    children: [
+                      for (var accessory in booking.accessories!)
+                        Column(
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  '${accessory['name']} (${accessory['quantity']}x)',
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const Spacer(),
+                                if (accessory['actualPickupTime'] != null)
+                                  Text(
+                                    accessory['actualReturnTime'] != null
+                                        ? 'Returned'
+                                        : 'Not returned',
+                                    style: TextStyle(
+                                      color:
+                                          accessory['actualReturnTime'] != null
+                                              ? AppColors.success
+                                              : AppColors.warning,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                if (accessory['actualPickupTime'] != null &&
+                                    accessory['actualReturnTime'] == null &&
+                                    (booking.status == RentalStatus.active ||
+                                        booking.status ==
+                                            RentalStatus.approved))
+                                  TextButton(
+                                    onPressed:
+                                        () => _markAccessoryAsReturned(
+                                          booking,
+                                          accessory,
+                                        ),
+                                    child: const Text(
+                                      'Mark as Returned',
+                                      style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
 
             const SizedBox(height: 8),
 
@@ -706,30 +979,6 @@ class _BookingsScreenState extends State<BookingsScreen>
                 ),
               ],
             ),
-
-            // Status-specific information
-            if (booking.status == RentalStatus.active &&
-                booking.activeTime != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Active for: ${booking.formattedActiveTime}',
-                  style: const TextStyle(
-                    color: AppColors.success,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-
-            if (booking.status == RentalStatus.rejected &&
-                booking.rejectionReason != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Reason: ${booking.rejectionReason}',
-                  style: const TextStyle(color: AppColors.danger, fontSize: 12),
-                ),
-              ),
 
             // Action buttons
             if (showPendingActions || showApprovedActions || showActiveActions)
@@ -836,9 +1085,9 @@ class _BookingsScreenState extends State<BookingsScreen>
       return SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
-          onPressed: () => _markAsPickedUp(booking),
+          onPressed: () => _showMarkItemsAsPickedUpDialog(booking),
           icon: const Icon(Icons.directions_bike, size: 16),
-          label: const Text('Mark as Picked Up'),
+          label: const Text('Mark Items as Picked Up'),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
@@ -848,14 +1097,15 @@ class _BookingsScreenState extends State<BookingsScreen>
     } else if (showActiveActions) {
       return SizedBox(
         width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: () => _markAsReturned(booking),
-          icon: const Icon(Icons.assignment_turned_in, size: 16),
-          label: const Text('Mark as Returned'),
+        child: ElevatedButton(
+          onPressed:
+              booking.allItemsReturned ? () => _markAsReturned(booking) : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.warning,
+            backgroundColor:
+                booking.allItemsReturned ? AppColors.success : Colors.grey,
             foregroundColor: Colors.white,
           ),
+          child: const Text('Mark Booking as Completed'),
         ),
       );
     }
@@ -875,6 +1125,426 @@ class _BookingsScreenState extends State<BookingsScreen>
       case RentalStatus.rejected:
         return AppColors.danger;
     }
+  }
+
+  String _formatTime(DateTime date) {
+    return '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _formatDuration(Duration? duration) {
+    if (duration == null) return '';
+    return '${duration.inHours}h ${duration.inMinutes.remainder(60)}m ${duration.inSeconds.remainder(60)}s';
+  }
+
+  Duration _getActiveDuration(
+    RentalRequest booking,
+    Map<String, dynamic> bike,
+  ) {
+    if (bike['actualReturnTime'] != null) {
+      return bike['actualReturnTime'].difference(bike['actualPickupTime']);
+    }
+
+    final bikeKey = '${booking.id}_${bike['bike_id']}';
+    if (_activeTimers.containsKey(bikeKey)) {
+      return _activeTimers[bikeKey]!;
+    }
+
+    return Duration.zero;
+  }
+
+  void _showBikeTimingDetails(
+    Map<String, dynamic> bike,
+    RentalRequest booking,
+  ) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.cardBackground,
+            title: Text(
+              bike['bike_name'],
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Model: ${bike['bike_model']}',
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Pickup Time: ${bike['actualPickupTime'] != null ? _formatTime(bike['actualPickupTime']) : 'Not picked up yet'}',
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Return Time: ${bike['actualReturnTime'] != null ? _formatTime(bike['actualReturnTime']) : 'Not returned yet'}',
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+                if (bike['actualPickupTime'] != null)
+                  Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      Text(
+                        'Active Duration: ${_formatDuration(_getActiveDuration(booking, bike))}',
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(color: AppColors.primary),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showMarkItemsAsPickedUpDialog(RentalRequest booking) {
+    List<bool> bikePickedUpStatus = List.generate(
+      booking.bikes.length,
+      (index) => false,
+    );
+
+    List<bool> accessoryPickedUpStatus = List.generate(
+      booking.accessories?.length ?? 0,
+      (index) => false,
+    );
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                backgroundColor: AppColors.cardBackground,
+                title: const Text(
+                  'Mark Items as Picked Up',
+                  style: TextStyle(color: AppColors.textPrimary),
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Select which items are being picked up now:',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Bikes section
+                      const Text(
+                        'Bicycles:',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      ...booking.bikes.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final bike = entry.value;
+                        return CheckboxListTile(
+                          title: Text(
+                            '${bike['bike_name']} (${bike['quantity']}x)',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          value: bikePickedUpStatus[index],
+                          onChanged: (value) {
+                            setState(() {
+                              bikePickedUpStatus[index] = value ?? false;
+                            });
+                          },
+                          activeColor: AppColors.primary,
+                        );
+                      }).toList(),
+
+                      // Accessories section
+                      if (booking.accessories != null &&
+                          booking.accessories!.isNotEmpty)
+                        Column(
+                          children: [
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Accessories:',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            ...booking.accessories!.asMap().entries.map((
+                              entry,
+                            ) {
+                              final index = entry.key;
+                              final accessory = entry.value;
+                              return CheckboxListTile(
+                                title: Text(
+                                  '${accessory['name']} (${accessory['quantity']}x)',
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                value: accessoryPickedUpStatus[index],
+                                onChanged: (value) {
+                                  setState(() {
+                                    accessoryPickedUpStatus[index] =
+                                        value ?? false;
+                                  });
+                                },
+                                activeColor: AppColors.primary,
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      // Update the bikes with pickup times
+                      List<Map<String, dynamic>> updatedBikes = [];
+                      List<Map<String, dynamic>> updatedAccessories = [];
+                      bool anyPickedUp = false;
+
+                      // Update bikes
+                      for (int i = 0; i < booking.bikes.length; i++) {
+                        if (bikePickedUpStatus[i]) {
+                          updatedBikes.add({
+                            ...booking.bikes[i],
+                            'actualPickupTime': DateTime.now(),
+                          });
+                          anyPickedUp = true;
+                        } else {
+                          updatedBikes.add(booking.bikes[i]);
+                        }
+                      }
+
+                      // Update accessories
+                      if (booking.accessories != null) {
+                        for (int i = 0; i < booking.accessories!.length; i++) {
+                          if (accessoryPickedUpStatus[i]) {
+                            updatedAccessories.add({
+                              ...booking.accessories![i],
+                              'actualPickupTime': DateTime.now(),
+                            });
+                            anyPickedUp = true;
+                          } else {
+                            updatedAccessories.add(booking.accessories![i]);
+                          }
+                        }
+                      }
+
+                      if (anyPickedUp) {
+                        setState(() {
+                          // Check if all items are now picked up
+                          final allItemsPickedUp =
+                              updatedBikes.every(
+                                (b) => b['actualPickupTime'] != null,
+                              ) &&
+                              (updatedAccessories.isEmpty ||
+                                  updatedAccessories.every(
+                                    (a) => a['actualPickupTime'] != null,
+                                  ));
+
+                          _allBookings[_allBookings.indexOf(booking)] = booking
+                              .copyWith(
+                                bikes: updatedBikes,
+                                accessories: updatedAccessories,
+                                status:
+                                    allItemsPickedUp
+                                        ? RentalStatus.active
+                                        : RentalStatus.approved,
+                                actualPickupDate: DateTime.now(),
+                              );
+
+                          // Start timers for picked up bikes
+                          for (int i = 0; i < booking.bikes.length; i++) {
+                            if (bikePickedUpStatus[i]) {
+                              final bikeKey =
+                                  '${booking.id}_${booking.bikes[i]['bike_id']}';
+                              _activeTimers[bikeKey] = Duration.zero;
+                            }
+                          }
+                        });
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Selected items marked as picked up!',
+                            ),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select at least one item'),
+                            backgroundColor: AppColors.danger,
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text(
+                      'Confirm',
+                      style: TextStyle(color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+    );
+  }
+
+  void _markBikeAsReturned(RentalRequest booking, Map<String, dynamic> bike) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.cardBackground,
+            title: Text(
+              'Mark ${bike['bike_name']} as Returned',
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
+            content: Text(
+              'Confirm that ${bike['bike_name']} has been returned?',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  // Find the bike in the booking and update it
+                  final bikeIndex = booking.bikes.indexWhere(
+                    (b) => b['bike_id'] == bike['bike_id'],
+                  );
+                  if (bikeIndex != -1) {
+                    List<Map<String, dynamic>> updatedBikes = List.from(
+                      booking.bikes,
+                    );
+                    updatedBikes[bikeIndex] = {
+                      ...updatedBikes[bikeIndex],
+                      'actualReturnTime': DateTime.now(),
+                    };
+
+                    // Remove the timer for this bike
+                    final bikeKey = '${booking.id}_${bike['bike_id']}';
+                    _activeTimers.remove(bikeKey);
+
+                    setState(() {
+                      _allBookings[_allBookings.indexOf(booking)] = booking
+                          .copyWith(bikes: updatedBikes);
+                    });
+
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '${bike['bike_name']} marked as returned!',
+                        ),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  }
+                },
+                child: const Text(
+                  'Confirm',
+                  style: TextStyle(color: AppColors.success),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _markAccessoryAsReturned(
+    RentalRequest booking,
+    Map<String, dynamic> accessory,
+  ) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.cardBackground,
+            title: Text(
+              'Mark ${accessory['name']} as Returned',
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
+            content: Text(
+              'Confirm that ${accessory['name']} has been returned?',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  if (booking.accessories != null) {
+                    final accessoryIndex = booking.accessories!.indexWhere(
+                      (a) => a['id'] == accessory['id'],
+                    );
+                    if (accessoryIndex != -1) {
+                      List<Map<String, dynamic>> updatedAccessories = List.from(
+                        booking.accessories!,
+                      );
+                      updatedAccessories[accessoryIndex] = {
+                        ...updatedAccessories[accessoryIndex],
+                        'actualReturnTime': DateTime.now(),
+                      };
+
+                      setState(() {
+                        _allBookings[_allBookings.indexOf(booking)] = booking
+                            .copyWith(accessories: updatedAccessories);
+                      });
+
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${accessory['name']} marked as returned!',
+                          ),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text(
+                  'Confirm',
+                  style: TextStyle(color: AppColors.success),
+                ),
+              ),
+            ],
+          ),
+    );
   }
 
   void _approveBooking(RentalRequest booking) {
@@ -1006,62 +1676,6 @@ class _BookingsScreenState extends State<BookingsScreen>
     );
   }
 
-  void _markAsPickedUp(RentalRequest booking) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            backgroundColor: AppColors.cardBackground,
-            title: const Text(
-              'Mark as Picked Up',
-              style: TextStyle(color: AppColors.textPrimary),
-            ),
-            content: Text(
-              'Mark bicycle as picked up by ${booking.userName}? This will start the rental timer.',
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  setState(() {
-                    final index = _allBookings.indexWhere(
-                      (b) => b.id == booking.id,
-                    );
-                    if (index != -1) {
-                      _allBookings[index] = booking.copyWith(
-                        status: RentalStatus.active,
-                        actualPickupDate: DateTime.now(),
-                        activeTime: Duration.zero,
-                      );
-                    }
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Bicycle marked as picked up! Timer started.',
-                      ),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                },
-                child: const Text(
-                  'Confirm',
-                  style: TextStyle(color: AppColors.primary),
-                ),
-              ),
-            ],
-          ),
-    );
-  }
-
   void _markAsReturned(RentalRequest booking) {
     showDialog(
       context: context,
@@ -1069,11 +1683,11 @@ class _BookingsScreenState extends State<BookingsScreen>
           (context) => AlertDialog(
             backgroundColor: AppColors.cardBackground,
             title: const Text(
-              'Mark as Returned',
+              'Mark as Completed',
               style: TextStyle(color: AppColors.textPrimary),
             ),
             content: Text(
-              'Mark bicycle as returned by ${booking.userName}?',
+              'Mark booking as completed for ${booking.userName}?',
               style: const TextStyle(color: AppColors.textSecondary),
             ),
             actions: [
@@ -1100,7 +1714,7 @@ class _BookingsScreenState extends State<BookingsScreen>
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Bicycle marked as returned!'),
+                      content: Text('Booking marked as completed!'),
                       backgroundColor: AppColors.success,
                     ),
                   );
@@ -1122,12 +1736,6 @@ class _BookingsScreenState extends State<BookingsScreen>
     final returnDateController = TextEditingController(
       text: booking.formattedReturnDate,
     );
-
-    // Create controllers for each bike's quantity
-    final bikeQuantityControllers =
-        booking.bikes.map((bike) {
-          return TextEditingController(text: bike['quantity'].toString());
-        }).toList();
 
     showDialog(
       context: context,
@@ -1200,102 +1808,6 @@ class _BookingsScreenState extends State<BookingsScreen>
                           }
                         },
                       ),
-
-                      const SizedBox(height: 16),
-                      const Divider(),
-                      const SizedBox(height: 8),
-
-                      // Bikes section
-                      const Text(
-                        'Bikes',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      ...booking.bikes.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final bike = entry.value;
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${bike['bike_name']} (${bike['bike_model']})',
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    'Daily rate: \$${bike['daily_rate']}',
-                                    style: const TextStyle(
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.remove, size: 18),
-                                  onPressed: () {
-                                    final currentValue =
-                                        int.tryParse(
-                                          bikeQuantityControllers[index].text,
-                                        ) ??
-                                        0;
-                                    if (currentValue > 1) {
-                                      setState(() {
-                                        bikeQuantityControllers[index].text =
-                                            (currentValue - 1).toString();
-                                      });
-                                    }
-                                  },
-                                ),
-                                SizedBox(
-                                  width: 40,
-                                  child: TextField(
-                                    controller: bikeQuantityControllers[index],
-                                    textAlign: TextAlign.center,
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(
-                                        vertical: 4,
-                                      ),
-                                    ),
-                                    onChanged: (value) {
-                                      // Validate input
-                                      if (value.isEmpty ||
-                                          int.tryParse(value) == null) {
-                                        bikeQuantityControllers[index].text =
-                                            '1';
-                                      }
-                                    },
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.add, size: 18),
-                                  onPressed: () {
-                                    final currentValue =
-                                        int.tryParse(
-                                          bikeQuantityControllers[index].text,
-                                        ) ??
-                                        0;
-                                    setState(() {
-                                      bikeQuantityControllers[index].text =
-                                          (currentValue + 1).toString();
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-                        );
-                      }).toList(),
                     ],
                   ),
                 ),
@@ -1336,27 +1848,6 @@ class _BookingsScreenState extends State<BookingsScreen>
                         return;
                       }
 
-                      // Update bike quantities
-                      final updatedBikes =
-                          booking.bikes.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final bike = Map<String, dynamic>.from(entry.value);
-                            bike['quantity'] = int.parse(
-                              bikeQuantityControllers[index].text,
-                            );
-                            return bike;
-                          }).toList();
-
-                      // Calculate new total cost
-                      final rentalDays =
-                          newReturnDate.difference(newPickupDate).inDays;
-                      final newTotalCost = updatedBikes.fold(0.0, (sum, bike) {
-                        return sum +
-                            (bike['daily_rate'] *
-                                bike['quantity'] *
-                                rentalDays);
-                      });
-
                       Navigator.pop(context);
                       setState(() {
                         final index = _allBookings.indexWhere(
@@ -1366,8 +1857,6 @@ class _BookingsScreenState extends State<BookingsScreen>
                           _allBookings[index] = booking.copyWith(
                             pickupDate: newPickupDate,
                             returnDate: newReturnDate,
-                            bikes: updatedBikes,
-                            totalCost: newTotalCost,
                           );
                         }
                       });

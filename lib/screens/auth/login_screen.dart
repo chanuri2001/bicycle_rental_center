@@ -2,55 +2,55 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../utils/constants.dart';
 import '../../main.dart';
+import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  final AuthService _authService = AuthService();
+
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() {
       _isLoading = true;
     });
 
     try {
-      await supabase.auth.signInWithPassword(
-        email: _emailController.text.trim(),
+      final tokenResponse = await _authService.login(
+        username: _usernameController.text.trim(),
         password: _passwordController.text,
       );
 
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/dashboard');
-      }
-    } on PostgrestException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error.message),
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        if (tokenResponse.isValid) {
+          Navigator.of(context).pushReplacementNamed('/dashboard');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tokenResponse.error ?? 'Login failed'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login successful! (Demo mode)'),
-            backgroundColor: AppColors.success,
+            content: Text('Login failed: ${error.toString()}'),
+            backgroundColor: AppColors.danger,
           ),
         );
-        Navigator.of(context).pushReplacementNamed('/dashboard');
       }
     } finally {
       if (mounted) {
@@ -74,7 +74,6 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 60),
-                // Logo and Title
                 const Icon(
                   Icons.directions_bike,
                   size: 80,
@@ -100,43 +99,45 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 48),
-                // Email Field
+
+                /// Username Field
                 TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
+                  controller: _usernameController,
                   style: const TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon:
-                        const Icon(Icons.email, color: AppColors.textSecondary),
+                    labelText: 'Username',
+                    prefixIcon: const Icon(
+                      Icons.person,
+                      color: AppColors.textSecondary,
+                    ),
                     border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppConstants.borderRadius),
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.borderRadius,
+                      ),
                     ),
                     filled: true,
                     fillColor: AppColors.cardBackground,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                        .hasMatch(value)) {
-                      return 'Please enter a valid email';
+                      return 'Please enter your username';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-                // Password Field
+
+                /// Password Field
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   style: const TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    prefixIcon:
-                        const Icon(Icons.lock, color: AppColors.textSecondary),
+                    prefixIcon: const Icon(
+                      Icons.lock,
+                      color: AppColors.textSecondary,
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
@@ -151,8 +152,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                     border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppConstants.borderRadius),
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.borderRadius,
+                      ),
                     ),
                     filled: true,
                     fillColor: AppColors.cardBackground,
@@ -168,7 +170,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: 24),
-                // Sign In Button
+
+                /// Sign In Button
                 SizedBox(
                   height: 50,
                   child: ElevatedButton(
@@ -176,20 +179,28 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.success,
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppConstants.borderRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.borderRadius,
+                        ),
                       ),
                     ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            'Sign In',
-                            style: TextStyle(fontSize: 16, color: Colors.white),
-                          ),
+                    child:
+                        _isLoading
+                            ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                            : const Text(
+                              'Sign In',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Sign Up Link
+
+                /// Sign Up Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -218,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }

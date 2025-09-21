@@ -93,7 +93,7 @@ class BicycleDetailsScreen extends StatelessWidget {
                     border: Border.all(color: Colors.blue.withOpacity(0.3)),
                   ),
                   child: Text(
-                    bicycle.type.name.toUpperCase(),
+                    bicycle.types.name.toUpperCase(),
                     style: const TextStyle(
                       color: Colors.blue,
                       fontSize: 12,
@@ -355,7 +355,7 @@ class BicycleDetailsScreen extends StatelessWidget {
 
     // Default image based on bike type
     String imagePath;
-    switch (bike.type.name) {
+    switch (bike.types.name) {
       case 'mountain':
         imagePath =
             'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=400&h=400&fit=crop&auto=format';
@@ -411,4 +411,8 @@ class BicycleDetailsScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+extension on String {
+  get name => null;
 }

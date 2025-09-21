@@ -29,6 +29,8 @@ class EventRegistration {
   final String? notes;
   final Map<String, dynamic> additionalInfo;
 
+
+
   EventRegistration({
     required this.id,
     required this.eventId,

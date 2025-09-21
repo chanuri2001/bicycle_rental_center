@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../services/auth_service.dart';
 import '../../utils/constants.dart';
-import 'dashboard_home_screen.dart';
-import '../inventory/inventory_screen.dart';
+import '../auth/user_info_screen.dart';
 import '../bookings/bookings_screen.dart';
-import '../events/events_screen.dart';
-import '../admin/admin_screen.dart';
-import '../inventory/bicycle_availability_screen.dart';
+
 import '../events/cycling_activities_screen.dart';
+import '../events/events_screen.dart';
+
+import '../inventory/bicycle_availability_screen.dart';
+import '../inventory/inventory_screen.dart';
+import 'dashboard_home_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -25,11 +30,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
   };
   bool _showPanel = false;
 
+  final AuthService _authService = AuthService();
+  String? _accessToken;
+
   @override
   void initState() {
     super.initState();
     _stats = {'total': 0, 'available': 0, 'inUse': 0, 'pending': 0};
     _loadStats();
+    _loadAccessToken();
+  }
+
+  Future<void> _loadAccessToken() async {
+    final token = await _authService.getAccessToken();
+    if (mounted) {
+      setState(() {
+        _accessToken = token;
+      });
+    }
   }
 
   Future<void> _loadStats() async {
@@ -58,18 +76,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   List<Widget> get _screens => [
-    DashboardHomeScreen(
-      stats: _stats,
-      onRefresh: _loadStats,
-      onNavigateToTab: _navigateToTab,
-    ),
-    const InventoryScreen(),
-    const BookingsScreen(),
-    const BicycleAvailabilityScreen(),
-    const EventsScreen(),
-    const CyclingActivitiesScreen(),
-    const AdminScreen(),
-  ];
+        DashboardHomeScreen(
+          stats: _stats,
+          onRefresh: _loadStats,
+          onNavigateToTab: _navigateToTab,
+        ),
+        const InventoryScreen(),
+        const BookingsScreen(),
+        const BicycleAvailabilityScreen(),
+        const EventsScreen(),
+        const CyclingActivitiesScreen(),
+        _accessToken != null
+            ? UserInfoScreen(token: _accessToken!)
+            : const Center(child: CircularProgressIndicator()),
+      ];
 
   @override
   Widget build(BuildContext context) {
